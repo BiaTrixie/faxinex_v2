@@ -8,15 +8,19 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import SocialButton from '@/components/SocialButton';
 import Colors from '@/constants/Colors';
+import app from '@/FirebaseConfig';
+import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -42,14 +46,32 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (validate()) {
       setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        const auth = getAuth(app);
+        await signInWithEmailAndPassword(auth, email, password);
         setIsLoading(false);
         router.push('/home');
-      }, 1500);
+      } catch (error: any) {
+        setIsLoading(false);
+        let message = 'Erro ao fazer login.';
+        if (error.code === 'auth/user-not-found') {
+          message = 'Usuário não encontrado.';
+        } else if (error.code === 'auth/wrong-password') {
+          message = 'Senha incorreta.';
+        } else if (error.code === 'auth/invalid-email') {
+          message = 'Email inválido.';
+        }
+        // Use Alert para mostrar o erro
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: message,
+      });
+      
+      }
     }
   };
 
@@ -122,7 +144,6 @@ export default function LoginScreen() {
             
             <View style={styles.socialButtonsContainer}>
               <SocialButton provider="google" onPress={handleGoogleLogin} />
-              <SocialButton provider="apple" onPress={handleAppleLogin} />
             </View>
             
             <TouchableOpacity onPress={goToSignUp} style={styles.signupLink}>
@@ -184,7 +205,7 @@ const styles = StyleSheet.create({
   },
   socialButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   signupLink: {

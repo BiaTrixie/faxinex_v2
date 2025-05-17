@@ -8,15 +8,19 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-
+import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import  app  from '@/FirebaseConfig'
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import SocialButton from '@/components/SocialButton';
 import Colors from '@/constants/Colors';
+import * as Google from 'expo-auth-session/providers/google';
+import Toast from 'react-native-toast-message';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -25,6 +29,20 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Google Auth Request
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    iosClientId: '508822075025-1470e41opqpq53bdlrotid69fvnmeh02.apps.googleusercontent.com',
+    androidClientId: '508822075025-0ho5nq8vqbbb83is28lfk93ff8badtv3.apps.googleusercontent.com',
+    webClientId: '508822075025-0ho5nq8vqbbb83is28lfk93ff8badtv3.apps.googleusercontent.com'
+  });
+
+  React.useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      handleGoogleSignUp(id_token);
+    }
+  }, [response]);
 
   const validate = () => {
     const newErrors: {[key: string]: string} = {};
@@ -49,25 +67,77 @@ export default function SignUpScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (validate()) {
       setIsLoading(true);
-      // Simulate API call
-      setTimeout(() => {
+      try {
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+        await updateProfile(userCredential.user, { displayName: name });
+
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          name,
+          email,
+          isAdmin: false,
+          createdAt: new Date(),
+        });
+
         setIsLoading(false);
-        router.push('/');
-      }, 1500);
+        Toast.show({
+        type: 'success',
+        text1: 'Cadastro criado com sucesso!',
+      });
+        router.push('/login');
+      } catch (error: any) {
+        setIsLoading(false);
+        let message = 'Erro ao criar conta.';
+        if (error.code === 'auth/email-already-in-use') {
+          message = 'Este email já está em uso.';
+        } else if (error.code === 'auth/invalid-email') {
+          message = 'Email inválido.';
+        } else if (error.code === 'auth/weak-password') {
+          message = 'Senha muito fraca.';
+        }
+       Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: message,
+      });
+      }
     }
   };
 
-  const handleGoogleSignUp = () => {
-    // Implement Google sign up
-    console.log('Google sign up');
-  };
+  const handleGoogleSignUp = async (idToken?: string) => {
+    if (!idToken) {
+      Alert.alert('Erro', 'Não foi possível autenticar com o Google.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      const credential = GoogleAuthProvider.credential(idToken);
+      const userCredential = await signInWithCredential(auth, credential);
 
-  const handleAppleSignUp = () => {
-    // Implement Apple sign up
-    console.log('Apple sign up');
+      // Salva no Firestore se for novo usuário
+      const userDoc = doc(db, 'users', userCredential.user.uid);
+      await setDoc(userDoc, {
+        name: userCredential.user.displayName,
+        email: userCredential.user.email,
+        isAdmin: false,
+        createdAt: new Date(),
+      }, { merge: true });
+
+      setIsLoading(false);
+      Alert.alert('Sucesso', 'Cadastro/login com Google realizado!');
+      router.push('/login');
+    } catch (error: any) {
+      setIsLoading(false);
+      Alert.alert('Erro', 'Não foi possível autenticar com o Google.');
+    }
   };
 
   const goToLogin = () => {
@@ -125,8 +195,7 @@ export default function SignUpScreen() {
             <Text style={styles.orText}>OU REGISTRE-SE COM</Text>
             
             <View style={styles.socialButtonsContainer}>
-              <SocialButton provider="google" onPress={handleGoogleSignUp} />
-              <SocialButton provider="apple" onPress={handleAppleSignUp} />
+              <SocialButton provider="google" onPress={() => promptAsync()} />
             </View>
             
             <TouchableOpacity onPress={goToLogin} style={styles.loginLink}>
@@ -185,7 +254,7 @@ const styles = StyleSheet.create({
   },
   socialButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   loginLink: {
