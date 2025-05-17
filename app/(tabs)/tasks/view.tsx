@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Clock, Users } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
+import BottomBar from '@/components/BottomBar';
 
 export default function ViewTaskScreen() {
   const router = useRouter();
@@ -59,6 +60,7 @@ export default function ViewTaskScreen() {
           </View>
         </View>
       </ScrollView>
+       <BottomBar />
     </SafeAreaView>
   );
 }

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/Colors';
+import { Plus } from 'lucide-react-native';
 
 interface ProjectCardProps {
   title?: string;
@@ -9,6 +10,8 @@ interface ProjectCardProps {
   totalTasks?: number;
   progress?: number;
   empty?: boolean;
+  groupId?: string | null;
+  onAddGroup?: () => void;
 }
 
 export default function ProjectCard({ 
@@ -16,8 +19,29 @@ export default function ProjectCard({
   completedTasks, 
   totalTasks, 
   progress, 
-  empty = false 
+  empty = false,
+  groupId,
+  onAddGroup,
 }: ProjectCardProps) {
+  // Se groupId for vazio ou nulo, mostra mensagem e botão de adicionar grupo
+  if (!groupId) {
+    return (
+      <LinearGradient
+        colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.emptyContent}>
+          <Text style={styles.emptyTitle}>Você ainda não participa de um grupo</Text>
+          <TouchableOpacity style={styles.addButton} onPress={onAddGroup}>
+            <Plus color="#FFF" size={24} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  }
+
   return (
     <LinearGradient
       colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
@@ -87,11 +111,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   emptySubtitle: {
     color: '#FFF',
     fontSize: 14,
     textAlign: 'center',
+  },
+  addButton: {
+    marginTop: 10,
+    backgroundColor: Colors.light.primary,
+    borderRadius: 20,
+    padding: 10,
   },
 });

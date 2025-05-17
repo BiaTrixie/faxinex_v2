@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/Colors';
+import BottomBar from '@/components/BottomBar';
 
 const PERIODS = ['DIÁRIO', 'SEMANAL', 'MENSAL', 'TOTAL'];
 
@@ -128,6 +129,7 @@ export default function RankingScreen() {
           <RankingItem position={8} name="MARCOS" points={500} />
         </View>
       </ScrollView>
+       <BottomBar />
     </SafeAreaView>
   );
 }

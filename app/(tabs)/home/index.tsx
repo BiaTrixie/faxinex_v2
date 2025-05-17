@@ -1,64 +1,97 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
 import ProjectCard from '@/components/ProjectCard';
-import TaskItem from '@/components/TaskItem';
 import BottomBar from '@/components/BottomBar';
 import Colors from '@/constants/Colors';
+import Button from '@/components/Button';
+import { useRouter } from 'expo-router';
+import { getAuth } from 'firebase/auth';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import app from '@/FirebaseConfig';
+import { Settings } from 'lucide-react-native';
+
 
 export default function HomeScreen() {
-  const hasProjects = true; // Toggle this to show different states
+  const [userName, setUserName] = useState<string>('');
+  const [userPhoto, setUserPhoto] = useState<string | undefined>(undefined);
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const [selectedTab, setSelectedTab] = useState<'todas' | 'pendentes' | 'finalizadas'>('todas');
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const auth = getAuth(app);
+      const user = auth.currentUser;
+      if (user) {
+        setUserName(user.displayName || user.email || 'Usuário');
+        // Busca o user no Firestore para pegar a foto
+        const db = getFirestore(app);
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setGroupId(data.group_id ?? null);
+          setUserPhoto(data.photoURL || user.photoURL || undefined);
+        } else {
+          setGroupId(null);
+          setUserPhoto(user.photoURL || undefined);
+        }
+      }
+    };
+    fetchUserData();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <Image
-            source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
+            source={{ uri: userPhoto || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
             style={styles.avatar}
           />
-          <Text style={styles.userName}>RONALDO</Text>
+          <Text style={styles.userName}>{userName}</Text>
+          <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
+            <Settings color="#FFF" size={24} />
+          </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.content}>
         <ProjectCard
-          empty={!hasProjects}
-          title={hasProjects ? "Família Moura" : undefined}
-          completedTasks={hasProjects ? 2 : undefined}
-          totalTasks={hasProjects ? 3 : undefined}
-          progress={hasProjects ? 80 : undefined}
+          groupId={groupId}
+          onAddGroup={() => router.push('/groups/create')}
         />
 
-        {hasProjects && (
-          <View style={styles.tasksContainer}>
-            <Text style={styles.tasksTitle}>TAREFAS</Text>
-            <TaskItem
-              title="LIMPAR BANHEIRO"
-              difficulty="hard"
-              onPress={() => {}}
+        <View style={styles.tasksContainer}>
+          <Text style={styles.tasksTitle}>TAREFAS</Text>
+          <View style={styles.menuBar}>
+            <Button
+              title="Todas"
+              variant={selectedTab === 'todas' ? 'primary' : 'outline'}
+              onPress={() => setSelectedTab('todas')}
+              style={styles.menuButton}
             />
-            <TaskItem
-              title="LIMPAR SALA"
-              difficulty="medium"
-              onPress={() => {}}
+            <Button
+              title="Pendentes"
+              variant={selectedTab === 'pendentes' ? 'primary' : 'outline'}
+              onPress={() => setSelectedTab('pendentes')}
+              style={styles.menuButton}
             />
-            <TaskItem
-              title="ORGANIZAR ARMÁRIO"
-              difficulty="easy"
-              onPress={() => {}}
-            />
-            <TaskItem
-              title="ORGANIZAR COZINHA"
-              difficulty="medium"
-              onPress={() => {}}
-            />
-            <TaskItem
-              title="LAVAR ESTEIRA"
-              difficulty="hard"
-              onPress={() => {}}
+            <Button
+              title="Finalizadas"
+              variant={selectedTab === 'finalizadas' ? 'primary' : 'outline'}
+              onPress={() => setSelectedTab('finalizadas')}
+              style={styles.menuButton}
             />
           </View>
-        )}
+          <View style={styles.noTasksContainer}>
+            <Text style={styles.noTasksText}>Você ainda não tem tarefas criadas</Text>
+            <Button
+              title="Adicionar Tarefa"
+              onPress={() => router.push('/tasks/create')}
+              style={styles.addTaskButton}
+            />
+          </View>
+        </View>
       </ScrollView>
 
       <BottomBar />
@@ -82,6 +115,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   avatar: {
     width: 40,
@@ -93,6 +127,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
+    flex: 1,
+  },
+  settingsButton: {
+    marginLeft: 10,
+    padding: 4,
   },
   content: {
     flex: 1,
@@ -108,5 +147,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.light.primary,
     marginBottom: 15,
+  },
+  menuBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 25,
+    gap: 10,
+  },
+  menuButton: {
+    flex: 1,
+    marginHorizontal: 2,
+  },
+  noTasksContainer: {
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  noTasksText: {
+    fontSize: 15,
+    color: '#888',
+    marginBottom: 20,
+  },
+  addTaskButton: {
+    minWidth: 180,
   },
 });
