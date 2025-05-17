@@ -1,0 +1,24 @@
+export default {
+  light: {
+    primary: '#5E75F2',
+    lightBlue1: '#668CD9',
+    lightBlue2: '#73B2D9',
+    lightGreen: '#73BFAA',
+    text: '#000',
+    background: '#FFFFFF',
+    tint: '#5E75F2',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#5E75F2',
+  },
+  dark: {
+    primary: '#5E75F2',
+    lightBlue1: '#668CD9',
+    lightBlue2: '#73B2D9',
+    lightGreen: '#73BFAA',
+    text: '#fff',
+    background: '#000',
+    tint: '#5E75F2',
+    tabIconDefault: '#ccc',
+    tabIconSelected: '#5E75F2',
+  },
+};
