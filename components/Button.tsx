@@ -9,6 +9,7 @@ import {
   ActivityIndicator 
 } from 'react-native';
 import Colors from '@/constants/Colors';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -29,6 +30,8 @@ export default function Button({
   disabled = false,
   variant = 'primary',
 }: ButtonProps) {
+  const { colors } = useTheme();
+
   const getButtonStyle = () => {
     switch (variant) {
       case 'primary':

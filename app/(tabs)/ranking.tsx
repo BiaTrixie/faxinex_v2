@@ -12,10 +12,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const PERIODS = ['DIÁRIO', 'SEMANAL', 'MENSAL', 'TOTAL'];
 
 export default function RankingScreen() {
+  const { colors } = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState('SEMANAL');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -28,9 +30,15 @@ export default function RankingScreen() {
   }, []);
 
   const RankingItem = ({ position, name, points, isCurrentUser = false }) => (
-    <View style={[styles.rankingItem, isCurrentUser && styles.currentUserItem]}>
+    <View style={[
+      styles.rankingItem,
+      isCurrentUser && { backgroundColor: colors.lightBlue2 }
+    ]}>
       <View style={styles.positionContainer}>
-        <Text style={[styles.position, isCurrentUser && styles.currentUserText]}>
+        <Text style={[
+          styles.position,
+          isCurrentUser && { color: colors.text }
+        ]}>
           {position}
         </Text>
       </View>
@@ -38,19 +46,25 @@ export default function RankingScreen() {
         source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
         style={styles.avatar}
       />
-      <Text style={[styles.userName, isCurrentUser && styles.currentUserText]}>
+      <Text style={[
+        styles.userName,
+        isCurrentUser && { color: colors.text }
+      ]}>
         {name}
       </Text>
-      <Text style={[styles.points, isCurrentUser && styles.currentUserText]}>
+      <Text style={[
+        styles.points,
+        isCurrentUser && { color: colors.text }
+      ]}>
         {points} pts
       </Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={[Colors.light.primary, Colors.light.lightBlue1]}
+        colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>RANKING</Text>
@@ -60,14 +74,14 @@ export default function RankingScreen() {
               key={period}
               style={[
                 styles.periodButton,
-                selectedPeriod === period && styles.selectedPeriodButton,
+                selectedPeriod === period && { backgroundColor: colors.background }
               ]}
               onPress={() => setSelectedPeriod(period)}
             >
               <Text
                 style={[
                   styles.periodButtonText,
-                  selectedPeriod === period && styles.selectedPeriodButtonText,
+                  selectedPeriod === period && { color: colors.primary }
                 ]}
               >
                 {period}
@@ -129,7 +143,7 @@ export default function RankingScreen() {
           <RankingItem position={8} name="MARCOS" points={500} />
         </View>
       </ScrollView>
-       <BottomBar />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -182,7 +196,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingVertical: 20,
     paddingHorizontal: 10,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: 'colors.background,',
   },
   firstPlace: {
     alignItems: 'center',

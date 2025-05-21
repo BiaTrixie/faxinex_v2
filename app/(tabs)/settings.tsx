@@ -12,9 +12,12 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera, Moon, Bell, Globe, Lock, Database, ChevronRight } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
+import { useTheme } from '@/contexts/ThemeContext';
+import BackButton from '@/components/BackButton';
+import BottomBar from '@/components/BottomBar';
 
 export default function SettingsScreen() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, colors, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
 
   const SettingItem = ({ icon, title, value, onPress, showToggle = false, showChevron = true }) => (
@@ -38,9 +41,10 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+       <BackButton />
       <LinearGradient
-        colors={[Colors.light.primary, Colors.light.lightBlue1]}
+        colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>CONFIGURAÇÕES</Text>
@@ -64,10 +68,10 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>APARÊNCIA</Text>
           <SettingItem
-            icon={<Moon color={Colors.light.primary} size={24} />}
+            icon={<Moon color={colors.primary} size={24} />}
             title="Modo Escuro"
-            value={darkMode}
-            onPress={() => setDarkMode(!darkMode)}
+            value={theme === 'dark'}
+            onPress={toggleTheme}
             showToggle
           />
         </View>
@@ -103,6 +107,7 @@ export default function SettingsScreen() {
           />
         </View>
       </ScrollView>
+      <BottomBar/>
     </SafeAreaView>
   );
 }

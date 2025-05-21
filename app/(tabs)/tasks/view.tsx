@@ -5,62 +5,64 @@ import { useRouter } from 'expo-router';
 import { Clock, Users } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function ViewTaskScreen() {
+  const { colors } = useTheme();
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={[Colors.light.primary, Colors.light.lightBlue1]}
+        colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>TAREFA</Text>
       </LinearGradient>
 
       <ScrollView style={styles.content}>
-        <Text style={styles.taskTitle}>LIMPAR SALA</Text>
+        <Text style={[styles.taskTitle, { color: colors.primary }]}>LIMPAR SALA</Text>
 
-        <View style={styles.infoSection}>
+        <View style={[styles.infoSection, { backgroundColor: colors.background }]}>
           <View style={styles.infoRow}>
-            <Clock color={Colors.light.primary} size={20} />
-            <Text style={styles.infoText}>Criado em 15 de março</Text>
+            <Clock color={colors.primary} size={20} />
+            <Text style={[styles.infoText, { color: colors.text }]}>Criado em 15 de março</Text>
           </View>
           <View style={styles.infoRow}>
-            <Users color={Colors.light.primary} size={20} />
-            <Text style={styles.infoText}>3 participantes</Text>
+            <Users color={colors.primary} size={20} />
+            <Text style={[styles.infoText, { color: colors.text }]}>3 participantes</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Descrição</Text>
-          <Text style={styles.description}>
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Descrição</Text>
+          <Text style={[styles.description, { color: colors.text }]}>
             Limpar e organizar a sala, incluindo varrer, tirar o pó e organizar os móveis.
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Progresso</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '60%' }]} />
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Progresso</Text>
+          <View style={[styles.progressBar, { backgroundColor: colors.lightBlue1 }]}>
+            <View style={[styles.progressFill, { width: '60%', backgroundColor: colors.primary }]} />
           </View>
-          <Text style={styles.progressText}>60% completo</Text>
+          <Text style={[styles.progressText, { color: colors.primary }]}>60% completo</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Participantes</Text>
+          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Participantes</Text>
           <View style={styles.participantsList}>
-            <View style={styles.participantItem}>
+            <View style={[styles.participantItem, { backgroundColor: colors.background }]}>
               <Image
                 source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
                 style={styles.participantAvatar}
               />
-              <Text style={styles.participantName}>RONALDO</Text>
+              <Text style={[styles.participantName, { color: colors.primary }]}>RONALDO</Text>
             </View>
           </View>
         </View>
       </ScrollView>
-       <BottomBar />
+      <BottomBar />
     </SafeAreaView>
   );
 }

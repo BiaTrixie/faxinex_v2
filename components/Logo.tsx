@@ -1,7 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Colors from '@/constants/Colors';
+import { View, Text, StyleSheet, Image } from 'react-native';
 
 type LogoProps = {
   size?: 'small' | 'medium' | 'large';
@@ -13,19 +11,11 @@ export default function Logo({ size = 'medium', withText = true }: LogoProps) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[Colors.light.lightBlue2, Colors.light.lightGreen]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.logoContainer, { width: logoSize, height: logoSize }]}>
-        <View style={styles.house}>
-          <View style={styles.roof} />
-          <View style={styles.body} />
-        </View>
-      </LinearGradient>
-      {withText && (
-        <Text style={styles.logoText}>FAXINEX</Text>
-      )}
+      <Image
+        source={require('@/assets/images/logo-faxinex.png')}
+        style={{ width: logoSize, height: logoSize }}
+        resizeMode="contain"
+      />
     </View>
   );
 }

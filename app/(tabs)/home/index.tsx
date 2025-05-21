@@ -9,9 +9,10 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import app from '@/FirebaseConfig';
 import { Settings } from 'lucide-react-native';
-
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function HomeScreen() {
+  const { theme, colors } = useTheme();
   const [userName, setUserName] = useState<string>('');
   const [userPhoto, setUserPhoto] = useState<string | undefined>(undefined);
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -41,16 +42,16 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.userInfo}>
           <Image
             source={{ uri: userPhoto || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
             style={styles.avatar}
           />
-          <Text style={styles.userName}>{userName}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
           <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
-            <Settings color="#FFF" size={24} />
+            <Settings color={colors.text} size={24} />
           </TouchableOpacity>
         </View>
       </View>
@@ -62,7 +63,7 @@ export default function HomeScreen() {
         />
 
         <View style={styles.tasksContainer}>
-          <Text style={styles.tasksTitle}>TAREFAS</Text>
+          <Text style={[styles.tasksTitle, { color: colors.primary }]}>TAREFAS</Text>
           <View style={styles.menuBar}>
             <Button
               title="Todas"
@@ -84,7 +85,7 @@ export default function HomeScreen() {
             />
           </View>
           <View style={styles.noTasksContainer}>
-            <Text style={styles.noTasksText}>Você ainda não tem tarefas criadas</Text>
+            <Text style={[styles.noTasksText, { color: colors.text }]}>Você ainda não tem tarefas criadas</Text>
             <Button
               title="Adicionar Tarefa"
               onPress={() => router.push('/tasks/create')}
