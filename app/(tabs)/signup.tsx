@@ -27,6 +27,7 @@ export default function SignUpScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,23 +47,19 @@ export default function SignUpScreen() {
 
   const validate = () => {
     const newErrors: {[key: string]: string} = {};
-    
     if (!name.trim()) {
       newErrors.name = 'Nome é obrigatório';
     }
-    
     if (!email.trim()) {
       newErrors.email = 'Email é obrigatório';
     } else if (!/\S+@\S+\.\S+/.test(email)) {
       newErrors.email = 'Email inválido';
     }
-    
     if (!password.trim()) {
       newErrors.password = 'Senha é obrigatória';
     } else if (password.length < 6) {
       newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,18 +75,21 @@ export default function SignUpScreen() {
 
         await updateProfile(userCredential.user, { displayName: name });
 
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+        await setDoc(doc(db, 'Users', userCredential.user.uid), {
+          id: userCredential.user.uid,
           name,
           email,
+          group_id: null,
+          image: imageUrl.trim() || 'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg',
           isAdmin: false,
           createdAt: new Date(),
         });
 
         setIsLoading(false);
         Toast.show({
-        type: 'success',
-        text1: 'Cadastro criado com sucesso!',
-      });
+          type: 'success',
+          text1: 'Cadastro criado com sucesso!',
+        });
         router.push('/login');
       } catch (error: any) {
         setIsLoading(false);
@@ -101,11 +101,11 @@ export default function SignUpScreen() {
         } else if (error.code === 'auth/weak-password') {
           message = 'Senha muito fraca.';
         }
-       Toast.show({
-        type: 'error',
-        text1: 'Erro',
-        text2: message,
-      });
+        Toast.show({
+          type: 'error',
+          text1: 'Erro',
+          text2: message,
+        });
       }
     }
   };
@@ -168,7 +168,6 @@ export default function SignUpScreen() {
               error={errors.name}
               autoCapitalize="words"
             />
-            
             <TextInput
               value={email}
               onChangeText={setEmail}
@@ -176,7 +175,6 @@ export default function SignUpScreen() {
               keyboardType="email-address"
               error={errors.email}
             />
-            
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -184,20 +182,22 @@ export default function SignUpScreen() {
               secureTextEntry
               error={errors.password}
             />
-            
+            <TextInput
+              value={imageUrl}
+              onChangeText={setImageUrl}
+              placeholder="URL da imagem (opcional)"
+              error={errors.imageUrl}
+            />
             <Button
               title="CRIAR CONTA"
               onPress={handleSignUp}
               loading={isLoading}
               style={styles.signUpButton}
             />
-            
             <Text style={styles.orText}>OU REGISTRE-SE COM</Text>
-            
             <View style={styles.socialButtonsContainer}>
               <SocialButton provider="google" onPress={() => promptAsync()} />
             </View>
-            
             <TouchableOpacity onPress={goToLogin} style={styles.loginLink}>
               <Text style={styles.loginText}>
                 JÁ TEM UMA CONTA? <Text style={styles.loginLinkText}>ENTRE</Text>

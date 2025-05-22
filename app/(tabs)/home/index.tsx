@@ -19,34 +19,41 @@ export default function HomeScreen() {
   const [selectedTab, setSelectedTab] = useState<'todas' | 'pendentes' | 'finalizadas'>('todas');
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const auth = getAuth(app);
-      const user = auth.currentUser;
-      if (user) {
-        setUserName(user.displayName || user.email || 'Usuário');
-        // Busca o user no Firestore para pegar a foto
-        const db = getFirestore(app);
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setGroupId(data.group_id ?? null);
-          setUserPhoto(data.photoURL || user.photoURL || undefined);
-        } else {
-          setGroupId(null);
-          setUserPhoto(user.photoURL || undefined);
-        }
+useEffect(() => {
+  const fetchUserData = async () => {
+    const auth = getAuth(app);
+    const user = auth.currentUser;
+    if (user) {
+      setUserName(user.displayName || user.email || 'Usuário não encontrado');
+      // Busca o user no Firestore para pegar a foto
+      const db = getFirestore(app);
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setGroupId(data.group_id ?? null);
+        setUserPhoto(
+          data.image ||
+          user.photoURL ||
+          'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
+        );
+      } else {
+        setGroupId(null);
+        setUserPhoto(
+          user.photoURL ||
+          'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
+        );
       }
-    };
-    fetchUserData();
-  }, []);
+    }
+  };
+  fetchUserData();
+}, []);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.userInfo}>
           <Image
-            source={{ uri: userPhoto || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
+            source={{ uri: userPhoto || 'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg' }}
             style={styles.avatar}
           />
           <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
