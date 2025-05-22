@@ -51,7 +51,7 @@ export default function HomeScreen() {
           />
           <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
           <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
-            <Settings color={colors.text} size={24} />
+            <Settings color={colors.icon} size={24} />
           </TouchableOpacity>
         </View>
       </View>

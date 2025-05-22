@@ -6,6 +6,7 @@ export default function TasksLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="create" />
       <Stack.Screen name="view" />
+       <Stack.Screen name="viewDetail" />
     </Stack>
   );
 }

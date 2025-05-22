@@ -1,68 +1,109 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Clock, Users } from 'lucide-react-native';
+import { Calendar, ListFilter } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
-import { useTheme } from '@/contexts/ThemeContext';
 
-export default function ViewTaskScreen() {
-  const { colors } = useTheme();
+type ViewMode = 'daily' | 'weekly' | 'monthly';
+type TaskDifficulty = 'easy' | 'medium' | 'hard';
+
+interface Task {
+  id: string;
+  title: string;
+  difficulty: TaskDifficulty;
+}
+
+const difficultyColors = {
+  easy: ['#73BFAA', '#73B2D9'],
+  medium: ['#FFB75E', '#ED8F03'],
+  hard: ['#FF512F', '#DD2476'],
+};
+
+export default function TasksScreen() {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<ViewMode>('daily');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const tasks: Task[] = [
+    { id: '1', title: 'LIMPAR BANHEIRO', difficulty: 'hard' },
+    { id: '2', title: 'LIMPAR SALA', difficulty: 'medium' },
+    { id: '3', title: 'ORGANIZAR ARMÁRIO', difficulty: 'easy' },
+    { id: '4', title: 'ORGANIZAR COZINHA', difficulty: 'medium' },
+    { id: '5', title: 'LAVAR ESTEIRA', difficulty: 'hard' },
+  ];
+
+  const ViewModeSelector = () => (
+    <View style={styles.viewModeContainer}>
+      {(['daily', 'weekly', 'monthly'] as ViewMode[]).map((mode) => (
+        <TouchableOpacity
+          key={mode}
+          style={[styles.viewModeButton, viewMode === mode && styles.viewModeButtonActive]}
+          onPress={() => setViewMode(mode)}
+        >
+          <Text style={[styles.viewModeText, viewMode === mode && styles.viewModeTextActive]}>
+            {mode.toUpperCase()}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const DateNavigator = () => (
+    <View style={styles.dateNavigator}>
+      <TouchableOpacity onPress={() => {}}>
+        <Calendar color={Colors.light.primary} size={24} />
+      </TouchableOpacity>
+      <Text style={styles.currentDate}>
+        {selectedDate.toLocaleDateString('pt-BR', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}
+      </Text>
+      <TouchableOpacity onPress={() => {}}>
+        <ListFilter color={Colors.light.primary} size={24} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  const TaskItem = ({ task }: { task: Task }) => (
+    <TouchableOpacity 
+      onPress={() => router.push('/tasks/viewDetail')}
+      style={styles.taskItemContainer}
+    >
+      <LinearGradient
+        colors={difficultyColors[task.difficulty]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.taskItem}
+      >
+        <Text style={styles.taskTitle}>{task.title}</Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={[colors.primary, colors.lightBlue1]}
+        colors={[Colors.light.primary, Colors.light.lightBlue1]}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>TAREFA</Text>
+        <Text style={styles.headerTitle}>TAREFAS</Text>
+        <ViewModeSelector />
       </LinearGradient>
 
       <ScrollView style={styles.content}>
-        <Text style={[styles.taskTitle, { color: colors.primary }]}>LIMPAR SALA</Text>
-
-        <View style={[styles.infoSection, { backgroundColor: colors.background }]}>
-          <View style={styles.infoRow}>
-            <Clock color={colors.primary} size={20} />
-            <Text style={[styles.infoText, { color: colors.text }]}>Criado em 15 de março</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Users color={colors.primary} size={20} />
-            <Text style={[styles.infoText, { color: colors.text }]}>3 participantes</Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Descrição</Text>
-          <Text style={[styles.description, { color: colors.text }]}>
-            Limpar e organizar a sala, incluindo varrer, tirar o pó e organizar os móveis.
-          </Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Progresso</Text>
-          <View style={[styles.progressBar, { backgroundColor: colors.lightBlue1 }]}>
-            <View style={[styles.progressFill, { width: '60%', backgroundColor: colors.primary }]} />
-          </View>
-          <Text style={[styles.progressText, { color: colors.primary }]}>60% completo</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.primary }]}>Participantes</Text>
-          <View style={styles.participantsList}>
-            <View style={[styles.participantItem, { backgroundColor: colors.background }]}>
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
-                style={styles.participantAvatar}
-              />
-              <Text style={[styles.participantName, { color: colors.primary }]}>RONALDO</Text>
-            </View>
-          </View>
+        <DateNavigator />
+        <View style={styles.taskList}>
+          {tasks.map((task) => (
+            <TaskItem key={task.id} task={task} />
+          ))}
         </View>
       </ScrollView>
-      <BottomBar />
+      <BottomBar/>
     </SafeAreaView>
   );
 }
@@ -75,7 +116,6 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 20,
     paddingBottom: 20,
-    paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
   },
@@ -84,83 +124,61 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 15,
+  },
+  viewModeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+  },
+  viewModeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+  },
+  viewModeButtonActive: {
+    backgroundColor: '#FFF',
+  },
+  viewModeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  viewModeTextActive: {
+    color: Colors.light.primary,
+  },
+  dateNavigator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: '#F8F9FA',
+    marginBottom: 20,
+  },
+  currentDate: {
+    fontSize: 16,
+    color: Colors.light.primary,
+    fontWeight: '500',
   },
   content: {
     flex: 1,
-    padding: 20,
+  },
+  taskList: {
+    paddingHorizontal: 20,
+  },
+  taskItemContainer: {
+    marginBottom: 10,
+  },
+  taskItem: {
+    padding: 15,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   taskTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.light.primary,
-    marginBottom: 20,
-  },
-  infoSection: {
-    backgroundColor: '#F5F5F5',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  infoText: {
-    marginLeft: 10,
-    color: '#666',
-    fontSize: 14,
-  },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
+    color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.light.primary,
-    marginBottom: 10,
-  },
-  description: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: 5,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: Colors.light.primary,
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 14,
-    color: Colors.light.primary,
-    fontWeight: '500',
-  },
-  participantsList: {
-    gap: 10,
-  },
-  participantItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    padding: 10,
-    borderRadius: 8,
-  },
-  participantAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  participantName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.light.primary,
   },
 });

@@ -4,11 +4,12 @@ export default {
     lightBlue1: '#668CD9',
     lightBlue2: '#73B2D9',
     lightGreen: '#73BFAA',
-    text: '#000',
+    text: '#fff',
     background: '#FFFFFF',
     tint: '#5E75F2',
     tabIconDefault: '#ccc',
     tabIconSelected: '#5E75F2',
+    icon: '#fff',
   },
   dark: {
     primary: '#5E75F2',
@@ -20,5 +21,6 @@ export default {
     tint: '#5E75F2',
     tabIconDefault: '#ccc',
     tabIconSelected: '#5E75F2',
+    icon: '#73B2D9',
   },
 };
