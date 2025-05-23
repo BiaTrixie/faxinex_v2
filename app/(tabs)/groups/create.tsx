@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
+import BottomBar from '@/components/BottomBar';
 
 export default function CreateGroupScreen() {
   const router = useRouter();
@@ -66,6 +67,7 @@ export default function CreateGroupScreen() {
           style={styles.createButton}
         />
       </ScrollView>
+      <BottomBar />
     </SafeAreaView>
   );
 }

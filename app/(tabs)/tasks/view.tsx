@@ -1,38 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Calendar, ListFilter } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
+import { Task } from '../home'; // ou '../types/Task' dependendo da sua estrutura
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
-type TaskDifficulty = 'easy' | 'medium' | 'hard';
 
-interface Task {
-  id: string;
-  title: string;
-  difficulty: TaskDifficulty;
-}
+const difficultyColors: Record<number, string[]> = {
+  1: ['#73BFAA', '#73B2D9'],   // Fácil
+  2: ['#FFB75E', '#ED8F03'],   // Média
+  3: ['#FF512F', '#DD2476'],   // Difícil
+};
 
-const difficultyColors = {
-  easy: ['#73BFAA', '#73B2D9'],
-  medium: ['#FFB75E', '#ED8F03'],
-  hard: ['#FF512F', '#DD2476'],
+const parseDifficulty = (value: string | number): number => {
+  if (typeof value === 'number') return value;
+  switch (value.toLowerCase()) {
+    case 'facil': return 1;
+    case 'media': return 2;
+    case 'dificil': return 3;
+    default: return 1;
+  }
 };
 
 export default function TasksScreen() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-  const tasks: Task[] = [
-    { id: '1', title: 'LIMPAR BANHEIRO', difficulty: 'hard' },
-    { id: '2', title: 'LIMPAR SALA', difficulty: 'medium' },
-    { id: '3', title: 'ORGANIZAR ARMÁRIO', difficulty: 'easy' },
-    { id: '4', title: 'ORGANIZAR COZINHA', difficulty: 'medium' },
-    { id: '5', title: 'LAVAR ESTEIRA', difficulty: 'hard' },
-  ];
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch('https://backend-faxinex.vercel.app/tasks');
+        const data = await response.json();
+        const parsedTasks: Task[] = data.map((task: any) => ({
+          ...task,
+          difficulty: parseDifficulty(task.difficulty),
+        }));
+        setTasks(parsedTasks);
+      } catch (error) {
+        console.error('Erro ao buscar tasks:', error);
+        setTasks([]);
+      }
+    };
+
+    fetchTasks();
+  }, []);
 
   const ViewModeSelector = () => (
     <View style={styles.viewModeContainer}>
@@ -52,38 +68,42 @@ export default function TasksScreen() {
 
   const DateNavigator = () => (
     <View style={styles.dateNavigator}>
-      <TouchableOpacity onPress={() => {}}>
+      <TouchableOpacity onPress={() => { }}>
         <Calendar color={Colors.light.primary} size={24} />
       </TouchableOpacity>
       <Text style={styles.currentDate}>
-        {selectedDate.toLocaleDateString('pt-BR', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        {selectedDate.toLocaleDateString('pt-BR', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
         })}
       </Text>
-      <TouchableOpacity onPress={() => {}}>
+      <TouchableOpacity onPress={() => { }}>
         <ListFilter color={Colors.light.primary} size={24} />
       </TouchableOpacity>
     </View>
   );
 
-  const TaskItem = ({ task }: { task: Task }) => (
-    <TouchableOpacity 
-      onPress={() => router.push('/tasks/viewDetail')}
-      style={styles.taskItemContainer}
-    >
-      <LinearGradient
-        colors={difficultyColors[task.difficulty]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.taskItem}
+  const TaskItem = ({ task }: { task: Task }) => {
+    const getBackgroundColor = (difficulty: number) => {
+      if (difficulty === 1) return 'green';
+      if (difficulty === 2) return '#eead2d';
+      return 'red';
+    };
+
+    return (
+      <TouchableOpacity
+        onPress={() => router.push({ pathname: '/tasks/[id]', params: { id: task.idGroup } })}
+        style={styles.taskItemContainer}
       >
-        <Text style={styles.taskTitle}>{task.title}</Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+        <View style={[styles.taskItem, { backgroundColor: getBackgroundColor(task.difficulty) }]}>
+          <Text style={styles.taskTitle}>{task.taskName}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -99,11 +119,12 @@ export default function TasksScreen() {
         <DateNavigator />
         <View style={styles.taskList}>
           {tasks.map((task) => (
-            <TaskItem key={task.id} task={task} />
+            <TaskItem key={task.idGroup} task={task} />
           ))}
+
         </View>
       </ScrollView>
-      <BottomBar/>
+      <BottomBar />
     </SafeAreaView>
   );
 }

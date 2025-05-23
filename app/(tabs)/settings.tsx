@@ -132,6 +132,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    padding: 35,
+    paddingBottom: 60
   },
   profileSection: {
     alignItems: 'center',

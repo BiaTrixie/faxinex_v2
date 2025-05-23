@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Clock, Users, Calendar, ListFilter, CircleCheck as CheckCircle2 } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
@@ -23,6 +23,9 @@ export default function ViewTaskScreen() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const { id } = useLocalSearchParams();
+
+  console.log(id);
 
   const dummyTask: Task = {
     id: '1',
@@ -119,10 +122,10 @@ export default function ViewTaskScreen() {
             </View>
           </View>
 
-          <View style={styles.section}>
+          {/* <View style={styles.section}>
             <Text style={styles.sectionTitle}>Descrição</Text>
             <Text style={styles.description}>{dummyTask.description}</Text>
-          </View>
+          </View> */}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Progresso</Text>
@@ -202,6 +205,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    padding: 35
   },
   taskCard: {
     backgroundColor: '#FFF',
