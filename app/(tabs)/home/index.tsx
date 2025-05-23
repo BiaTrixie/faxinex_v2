@@ -28,6 +28,8 @@ export default function HomeScreen() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const [selectedTab, setSelectedTab] = useState<'todas' | 'Pendente' | 'Finalizada'>('todas');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [groupName, setGroupName] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,6 +37,7 @@ export default function HomeScreen() {
       const authentication = auth;
       const user = authentication.currentUser;
       if (user) {
+        setUserId(user.uid);
         setUserName(user.displayName || user.email || 'Usuário não encontrado');
         const db = firestore;
         const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -46,6 +49,13 @@ export default function HomeScreen() {
             user.photoURL ||
             'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
           );
+          // Buscar nome do grupo se houver group_id
+          if (data.group_id) {
+            const groupDoc = await getDoc(doc(db, 'groups', data.group_id));
+            if (groupDoc.exists()) {
+              setGroupName(groupDoc.data().name);
+            }
+          }
         } else {
           setGroupId(null);
           setUserPhoto(
@@ -91,6 +101,18 @@ export default function HomeScreen() {
     }
   }
 
+  // Filtra tasks do grupo atribuídas ao usuário logado
+  const userTasks = tasks.filter(
+    (task) =>
+      groupId &&
+      task.idGroup === groupId &&
+      userId &&
+      task.participants.includes(userId)
+  );
+  const completedUserTasks = userTasks.filter(
+    (task) => task.status === 'Finalizada'
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
@@ -107,10 +129,19 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <ProjectCard
-          groupId={groupId}
-          onAddGroup={() => router.push('/groups/create')}
-        />
+        {groupId ? (
+          <View style={{ marginHorizontal: 20, marginVertical: 10, padding: 20, borderRadius: 15, backgroundColor: colors.primary }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{groupName || 'Grupo'}</Text>
+            <Text style={{ color: '#fff', fontSize: 16, marginTop: 5 }}>
+              Minhas tarefas: {completedUserTasks.length}/{userTasks.length}
+            </Text>
+          </View>
+        ) : (
+          <ProjectCard
+            groupId={groupId}
+            onAddGroup={() => router.push('/groups/create')}
+          />
+        )}
 
         <View style={styles.tasksContainer}>
           <Text style={[styles.tasksTitle, { color: colors.primary }]}>TAREFAS</Text>
