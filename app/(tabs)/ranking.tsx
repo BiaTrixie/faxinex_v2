@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,53 +16,86 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 const PERIODS = ['DIÁRIO', 'SEMANAL', 'MENSAL', 'TOTAL'];
 
+// 1. Defina a interface User
+interface User {
+  id: string;
+  name: string;
+  image: string;
+  points: number;
+}
+
 export default function RankingScreen() {
   const { colors } = useTheme();
   const [selectedPeriod, setSelectedPeriod] = useState('SEMANAL');
   const [refreshing, setRefreshing] = useState(false);
+  // 2. Tipar o estado users corretamente
+  const [users, setUsers] = useState<User[]>([]);
+
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch('https://backend-faxinex.vercel.app/users');
+      const data = await res.json();
+      // Ordena por pontos decrescente
+      setUsers(
+        data.sort(
+          (a: { points: number }, b: { points: number }) => b.points - a.points
+        )
+      );
+    } catch (e) {
+      setUsers([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Simulate data refresh
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    fetchUsers().finally(() => setRefreshing(false));
   }, []);
 
-  const RankingItem = ({ position, name, points, isCurrentUser = false }) => (
-    <View style={[
-      styles.rankingItem,
-      isCurrentUser && { backgroundColor: colors.lightBlue2 }
-    ]}>
+  // 3. Tipar as props do RankingItem
+  const RankingItem = ({
+    position,
+    name,
+    points,
+    image,
+    isCurrentUser = false,
+  }: {
+    position: number;
+    name: string;
+    points: number;
+    image: string;
+    isCurrentUser?: boolean;
+  }) => (
+    <View
+      style={[
+        styles.rankingItem,
+        isCurrentUser && { backgroundColor: colors.lightBlue2 },
+      ]}
+    >
       <View style={styles.positionContainer}>
-        <Text style={[
-          styles.position,
-          isCurrentUser && { color: colors.text }
-        ]}>
+        <Text
+          style={[styles.position, isCurrentUser && { color: colors.text }]}
+        >
           {position}
         </Text>
       </View>
-      <Image
-        source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
-        style={styles.avatar}
-      />
-      <Text style={[
-        styles.userName,
-        isCurrentUser && { color: colors.text }
-      ]}>
+      <Image source={{ uri: image }} style={styles.avatar} />
+      <Text style={[styles.userName, isCurrentUser && { color: colors.text }]}>
         {name}
       </Text>
-      <Text style={[
-        styles.points,
-        isCurrentUser && { color: colors.text }
-      ]}>
+      <Text style={[styles.points, isCurrentUser && { color: colors.text }]}>
         {points} pts
       </Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <LinearGradient
         colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
@@ -74,14 +107,16 @@ export default function RankingScreen() {
               key={period}
               style={[
                 styles.periodButton,
-                selectedPeriod === period && { backgroundColor: colors.background }
+                selectedPeriod === period && {
+                  backgroundColor: colors.background,
+                },
               ]}
               onPress={() => setSelectedPeriod(period)}
             >
               <Text
                 style={[
                   styles.periodButtonText,
-                  selectedPeriod === period && { color: colors.primary }
+                  selectedPeriod === period && { color: colors.primary },
                 ]}
               >
                 {period}
@@ -97,50 +132,54 @@ export default function RankingScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.topThree}>
-          <View style={styles.secondPlace}>
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
-              style={styles.topThreeAvatar}
-            />
-            <View style={[styles.crown, styles.silverCrown]}>
-              <Text style={styles.crownText}>2</Text>
+        {users.length >= 3 && (
+          <View style={styles.topThree}>
+            <View style={styles.secondPlace}>
+              <Image
+                source={{ uri: users[1].image }}
+                style={styles.topThreeAvatar}
+              />
+              <View style={[styles.crown, styles.silverCrown]}>
+                <Text style={styles.crownText}>2</Text>
+              </View>
+              <Text style={styles.topThreeName}>{users[1].name}</Text>
+              <Text style={styles.topThreePoints}>{users[1].points} pts</Text>
             </View>
-            <Text style={styles.topThreeName}>MARIA</Text>
-            <Text style={styles.topThreePoints}>850 pts</Text>
-          </View>
-          
-          <View style={styles.firstPlace}>
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
-              style={[styles.topThreeAvatar, styles.firstPlaceAvatar]}
-            />
-            <View style={[styles.crown, styles.goldCrown]}>
-              <Text style={styles.crownText}>1</Text>
+            <View style={styles.firstPlace}>
+              <Image
+                source={{ uri: users[0].image }}
+                style={[styles.topThreeAvatar, styles.firstPlaceAvatar]}
+              />
+              <View style={[styles.crown, styles.goldCrown]}>
+                <Text style={styles.crownText}>1</Text>
+              </View>
+              <Text style={styles.topThreeName}>{users[0].name}</Text>
+              <Text style={styles.topThreePoints}>{users[0].points} pts</Text>
             </View>
-            <Text style={styles.topThreeName}>JOÃO</Text>
-            <Text style={styles.topThreePoints}>920 pts</Text>
-          </View>
-          
-          <View style={styles.thirdPlace}>
-            <Image
-              source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
-              style={styles.topThreeAvatar}
-            />
-            <View style={[styles.crown, styles.bronzeCrown]}>
-              <Text style={styles.crownText}>3</Text>
+            <View style={styles.thirdPlace}>
+              <Image
+                source={{ uri: users[2].image }}
+                style={styles.topThreeAvatar}
+              />
+              <View style={[styles.crown, styles.bronzeCrown]}>
+                <Text style={styles.crownText}>3</Text>
+              </View>
+              <Text style={styles.topThreeName}>{users[2].name}</Text>
+              <Text style={styles.topThreePoints}>{users[2].points} pts</Text>
             </View>
-            <Text style={styles.topThreeName}>PEDRO</Text>
-            <Text style={styles.topThreePoints}>780 pts</Text>
           </View>
-        </View>
+        )}
 
         <View style={styles.rankingList}>
-          <RankingItem position={4} name="ANA" points={700} />
-          <RankingItem position={5} name="CARLOS" points={650} />
-          <RankingItem position={6} name="RONALDO" points={600} isCurrentUser />
-          <RankingItem position={7} name="PATRICIA" points={550} />
-          <RankingItem position={8} name="MARCOS" points={500} />
+          {users.map((user, idx) => (
+            <RankingItem
+              key={user.id}
+              position={idx + 1}
+              name={user.name}
+              points={user.points}
+              image={user.image}
+            />
+          ))}
         </View>
       </ScrollView>
       <BottomBar />
