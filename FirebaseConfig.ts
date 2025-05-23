@@ -1,9 +1,12 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth, initializeAuth } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
-// Your web app's Firebase configuration
+// @ts-ignore
+import { getReactNativePersistence } from 'firebase/auth';
+
 const firebaseConfig = {
   apiKey: "AIzaSyAMZ7Mu_DsD5BYfHFyO6WWIwCcbXbEzjo0",
   authDomain: "faxinex-630ad.firebaseapp.com",
@@ -12,8 +15,18 @@ const firebaseConfig = {
   messagingSenderId: "508822075025",
   appId: "1:508822075025:web:ef77d415a3bc31ad233130"
 };
-
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-export default app;
+let auth: Auth;
+
+if (Platform.OS === 'web') {
+  auth = getAuth(app); // Web usa getAuth
+} else {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
+
+const firestore: Firestore = getFirestore(app);
+
+export { auth, firestore };

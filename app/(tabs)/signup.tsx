@@ -11,9 +11,9 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
-import  app  from '@/FirebaseConfig'
+import { auth, firestore } from '../../FirebaseConfig'; // Importando auth e firestore
+import { createUserWithEmailAndPassword, updateProfile, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
@@ -68,14 +68,12 @@ export default function SignUpScreen() {
     if (validate()) {
       setIsLoading(true);
       try {
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
+        // Usando auth e firestore importados
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
         await updateProfile(userCredential.user, { displayName: name });
 
-        await setDoc(doc(db, 'Users', userCredential.user.uid), {
+        await setDoc(doc(firestore, 'Users', userCredential.user.uid), {
           id: userCredential.user.uid,
           name,
           email,
@@ -117,13 +115,11 @@ export default function SignUpScreen() {
     }
     setIsLoading(true);
     try {
-      const auth = getAuth(app);
-      const db = getFirestore(app);
+      // Usando auth e firestore importados
       const credential = GoogleAuthProvider.credential(idToken);
       const userCredential = await signInWithCredential(auth, credential);
 
-      // Salva no Firestore se for novo usuário
-      const userDoc = doc(db, 'users', userCredential.user.uid);
+      const userDoc = doc(firestore, 'users', userCredential.user.uid);
       await setDoc(userDoc, {
         name: userCredential.user.displayName,
         email: userCredential.user.email,
