@@ -1,114 +1,166 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { useSignIn, useAuth } from '@clerk/clerk-expo';
+import { signInWithCustomToken } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import Toast from 'react-native-toast-message';
 
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import SocialButton from '@/components/SocialButton';
 import Colors from '@/constants/Colors';
-import app from '@/FirebaseConfig';
-import Toast from 'react-native-toast-message';
+import { auth, firestore } from '@/FirebaseConfig';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn, setActive } = useSignIn();
+  const { getToken } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const validate = () => {
-    const newErrors: {[key: string]: string} = {};
-    
-    if (!email.trim()) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email inválido';
-    }
-    
-    if (!password.trim()) {
-      newErrors.password = 'Senha é obrigatória';
-    }
-    
+    const newErrors: { [key: string]: string } = {};
+    if (!email.trim()) newErrors.email = 'Email é obrigatório';
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email inválido';
+    if (!password.trim()) newErrors.password = 'Senha é obrigatória';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleLogin = async () => {
-    if (validate()) {
-      setIsLoading(true);
-      try {
-        const auth = getAuth(app);
-        await signInWithEmailAndPassword(auth, email, password);
+    if (!validate()) return;
+    setIsLoading(true);
+
+    try {
+      const signInAttempt = await signIn?.create({
+        identifier: email,
+        password,
+      });
+
+      if (signInAttempt?.status === 'complete') {
+        if (setActive) {
+          await setActive({ session: signInAttempt.createdSessionId });
+        }
+
+        const token = await getToken({ template: 'integration_firebase' });
+        if (!token) throw new Error('Não foi possível obter o token de autenticação.');
+
+        const userCredential = await signInWithCustomToken(auth, token);
+
+        // Verifica se o usuário já existe no Firestore
+        const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (!userDoc.exists()) {
+          const name = userCredential.user.displayName || 'Usuário';
+          const email = userCredential.user.email || '';
+          const imageUrl =
+            userCredential.user.photoURL ||
+            'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg';
+
+          await setDoc(userDocRef, {
+            id: userCredential.user.uid,
+            name,
+            email,
+            group_id: null,
+            image: imageUrl.trim(),
+            isAdmin: false,
+            createdAt: new Date(),
+          });
+        }
+
         setIsLoading(false);
         router.push('/home');
-      } catch (error: any) {
-        setIsLoading(false);
-        let message = 'Erro ao fazer login.';
-        if (error.code === 'auth/user-not-found') {
-          message = 'Usuário não encontrado.';
-        } else if (error.code === 'auth/wrong-password') {
-          message = 'Senha incorreta.';
-        } else if (error.code === 'auth/invalid-email') {
-          message = 'Email inválido.';
-        }
-        // Use Alert para mostrar o erro
+      } else {
+        throw new Error('Login incompleto. Verifique seu e-mail ou tente novamente.');
+      }
+    } catch (err: any) {
+      setIsLoading(false);
       Toast.show({
         type: 'error',
         text1: 'Erro',
-        text2: message,
+        text2: err.errors?.[0]?.message || err.message || 'Erro ao fazer login.',
       });
-      
-      }
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Implement Google login
-    console.log('Google login');
-  };
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const result = await signIn?.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: 'http://localhost:8081',
+        redirectUrlComplete: 'http://localhost:8081', 
+      });
 
-  const handleAppleLogin = () => {
-    // Implement Apple login
-    console.log('Apple login');
+
+      const token = await getToken({ template: 'integration_firebase' });
+      if (!token) throw new Error('Não foi possível obter o token de autenticação.');
+
+      const userCredential = await signInWithCustomToken(auth, token);
+
+      const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        const name = userCredential.user.displayName || 'Usuário';
+        const email = userCredential.user.email || '';
+        const imageUrl =
+          userCredential.user.photoURL ||
+          'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg';
+
+        await setDoc(userDocRef, {
+          id: userCredential.user.uid,
+          name,
+          email,
+          group_id: null,
+          image: imageUrl.trim(),
+          isAdmin: false,
+          createdAt: new Date(),
+        });
+      }
+
+      setIsLoading(false);
+      router.push('/home');
+    } catch (err: any) {
+      setIsLoading(false);
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: err.errors?.[0]?.message || err.message || 'Erro ao fazer login com Google.',
+      });
+    }
   };
 
   const goToSignUp = () => {
     router.push('/signup');
   };
 
-  const forgotPassword = () => {
-    // Implement forgot password
-    console.log('Forgot password');
-  };
-
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Logo size="medium" withText={false} />
             <Text style={styles.title}>BEM VINDO DE VOLTA!</Text>
           </View>
-          
           <View style={styles.form}>
             <TextInput
               value={email}
@@ -117,7 +169,6 @@ export default function LoginScreen() {
               keyboardType="email-address"
               error={errors.email}
             />
-            
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -125,30 +176,14 @@ export default function LoginScreen() {
               secureTextEntry
               error={errors.password}
             />
-            
-            <TouchableOpacity 
-              onPress={forgotPassword} 
-              style={styles.forgotPasswordContainer}
-            >
-              <Text style={styles.forgotPasswordText}>ESQUECI A SENHA</Text>
-            </TouchableOpacity>
-            
-            <Button
-              title="ENTRAR"
-              onPress={handleLogin}
-              loading={isLoading}
-              style={styles.loginButton}
-            />
-            
+            <Button title="ENTRAR" onPress={handleLogin} loading={isLoading} style={styles.loginButton} />
             <Text style={styles.orText}>OU ENTRE COM</Text>
-            
             <View style={styles.socialButtonsContainer}>
               <SocialButton provider="google" onPress={handleGoogleLogin} />
             </View>
-            
             <TouchableOpacity onPress={goToSignUp} style={styles.signupLink}>
               <Text style={styles.signupText}>
-                NÃO TEM UMA CONTA? <Text style={styles.signupLinkText}>REGISTE-SE</Text>
+                NÃO TEM UMA CONTA? <Text style={styles.signupLinkText}>REGISTRE-SE</Text>
               </Text>
             </TouchableOpacity>
           </View>

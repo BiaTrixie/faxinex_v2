@@ -1,78 +1,98 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { auth, firestore } from '../../FirebaseConfig'; // Importando auth e firestore
-import { createUserWithEmailAndPassword, updateProfile, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { useSignUp, useAuth } from '@clerk/clerk-expo';
+import { signInWithCustomToken, updateProfile } from 'firebase/auth';
+import Toast from 'react-native-toast-message';
+
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
-import SocialButton from '@/components/SocialButton';
 import Colors from '@/constants/Colors';
-import * as Google from 'expo-auth-session/providers/google';
-import Toast from 'react-native-toast-message';
+import { auth, firestore } from '@/FirebaseConfig';
+import CodePrompt from '@/components/CodePrompt';
+import { doc, setDoc } from 'firebase/firestore';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { signUp, setActive } = useSignUp();
+  const { getToken, signOut } = useAuth(); 
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-
-  // Google Auth Request
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    iosClientId: '508822075025-1470e41opqpq53bdlrotid69fvnmeh02.apps.googleusercontent.com',
-    androidClientId: '508822075025-0ho5nq8vqbbb83is28lfk93ff8badtv3.apps.googleusercontent.com',
-    webClientId: '508822075025-0ho5nq8vqbbb83is28lfk93ff8badtv3.apps.googleusercontent.com'
-  });
-
-  React.useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
-      handleGoogleSignUp(id_token);
-    }
-  }, [response]);
+  const [showCodePrompt, setShowCodePrompt] = useState(false);
 
   const validate = () => {
-    const newErrors: {[key: string]: string} = {};
-    if (!name.trim()) {
-      newErrors.name = 'Nome é obrigatório';
-    }
-    if (!email.trim()) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email inválido';
-    }
-    if (!password.trim()) {
-      newErrors.password = 'Senha é obrigatória';
-    } else if (password.length < 6) {
-      newErrors.password = 'Senha deve ter pelo menos 6 caracteres';
-    }
+    const newErrors: { [key: string]: string } = {};
+    if (!name.trim()) newErrors.name = 'Nome é obrigatório';
+    if (!email.trim()) newErrors.email = 'Email é obrigatório';
+    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Email inválido';
+    if (!password.trim()) newErrors.password = 'Senha é obrigatória';
+    else if (password.length < 6) newErrors.password = 'A senha deve ter pelo menos 6 caracteres';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSignUp = async () => {
-    if (validate()) {
-      setIsLoading(true);
-      try {
-        // Usando auth e firestore importados
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    if (!validate()) return;
+    setIsLoading(true);
 
+    try {
+      // Faz signOut do Clerk antes de criar novo usuário
+      await signOut();
+
+      await signUp?.create({
+        emailAddress: email,
+        password,
+      });
+
+      await signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
+
+      setShowCodePrompt(true);
+      setIsLoading(false);
+    } catch (err: any) {
+      setIsLoading(false);
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: err.errors?.[0]?.message || err.message || 'Erro ao criar conta.',
+      });
+    }
+  };
+
+  const handleCodeSubmit = async (code: string) => {
+    setIsLoading(true);
+    try {
+      const result = await signUp?.attemptEmailAddressVerification({ code });
+
+      if (result?.status === 'complete') {
+        if (setActive) {
+          await setActive({ session: result.createdSessionId });
+        }
+
+        const token = await getToken({ template: 'integration_firebase' });
+        if (!token) throw new Error('Não foi possível obter o token de autenticação.');
+
+        // Login no Firebase com o token customizado
+        const userCredential = await signInWithCustomToken(auth, token);
+
+        // Atualiza o displayName no Firebase Auth
         await updateProfile(userCredential.user, { displayName: name });
 
+        // Cria o usuário no Firestore
         await setDoc(doc(firestore, 'Users', userCredential.user.uid), {
           id: userCredential.user.uid,
           name,
@@ -83,57 +103,25 @@ export default function SignUpScreen() {
           createdAt: new Date(),
         });
 
+        setShowCodePrompt(false);
         setIsLoading(false);
-        Toast.show({
-          type: 'success',
-          text1: 'Cadastro criado com sucesso!',
-        });
-        router.push('/login');
-      } catch (error: any) {
-        setIsLoading(false);
-        let message = 'Erro ao criar conta.';
-        if (error.code === 'auth/email-already-in-use') {
-          message = 'Este email já está em uso.';
-        } else if (error.code === 'auth/invalid-email') {
-          message = 'Email inválido.';
-        } else if (error.code === 'auth/weak-password') {
-          message = 'Senha muito fraca.';
-        }
-        Toast.show({
-          type: 'error',
-          text1: 'Erro',
-          text2: message,
-        });
+        router.push('/home');
+      } else {
+        throw new Error('Verificação incompleta. Código inválido?');
       }
+    } catch (err: any) {
+      setIsLoading(false);
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: err.errors?.[0]?.message || err.message || 'Falha na verificação.',
+      });
     }
   };
 
-  const handleGoogleSignUp = async (idToken?: string) => {
-    if (!idToken) {
-      Alert.alert('Erro', 'Não foi possível autenticar com o Google.');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      // Usando auth e firestore importados
-      const credential = GoogleAuthProvider.credential(idToken);
-      const userCredential = await signInWithCredential(auth, credential);
-
-      const userDoc = doc(firestore, 'users', userCredential.user.uid);
-      await setDoc(userDoc, {
-        name: userCredential.user.displayName,
-        email: userCredential.user.email,
-        isAdmin: false,
-        createdAt: new Date(),
-      }, { merge: true });
-
-      setIsLoading(false);
-      Alert.alert('Sucesso', 'Cadastro/login com Google realizado!');
-      router.push('/login');
-    } catch (error: any) {
-      setIsLoading(false);
-      Alert.alert('Erro', 'Não foi possível autenticar com o Google.');
-    }
+  const handleCancelCode = () => {
+    setShowCodePrompt(false);
+    setIsLoading(false);
   };
 
   const goToLogin = () => {
@@ -142,20 +130,15 @@ export default function SignUpScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent} 
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <Logo size="medium" withText={false} />
-            <Text style={styles.title}>SEJA BEM VINDO</Text>
-            <Text style={styles.subtitle}>VAMOS COMEÇAR!</Text>
+            <Text style={styles.title}>CRIAR CONTA</Text>
           </View>
-          
           <View style={styles.form}>
             <TextInput
               value={name}
@@ -184,16 +167,7 @@ export default function SignUpScreen() {
               placeholder="URL da imagem (opcional)"
               error={errors.imageUrl}
             />
-            <Button
-              title="CRIAR CONTA"
-              onPress={handleSignUp}
-              loading={isLoading}
-              style={styles.signUpButton}
-            />
-            <Text style={styles.orText}>OU REGISTRE-SE COM</Text>
-            <View style={styles.socialButtonsContainer}>
-              <SocialButton provider="google" onPress={() => promptAsync()} />
-            </View>
+            <Button title="REGISTRAR" onPress={handleSignUp} loading={isLoading} style={styles.signUpButton} />
             <TouchableOpacity onPress={goToLogin} style={styles.loginLink}>
               <Text style={styles.loginText}>
                 JÁ TEM UMA CONTA? <Text style={styles.loginLinkText}>ENTRE</Text>
@@ -202,6 +176,12 @@ export default function SignUpScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CodePrompt
+        visible={showCodePrompt}
+        onSubmit={handleCodeSubmit}
+        onCancel={handleCancelCode}
+      />
     </SafeAreaView>
   );
 }

@@ -10,17 +10,36 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Camera, Moon, Bell, Globe, Lock, Database, ChevronRight } from 'lucide-react-native';
+import { Camera, Moon, Bell, Globe, Lock, Database, ChevronRight, LogOut } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import { useTheme } from '@/contexts/ThemeContext';
 import BackButton from '@/components/BackButton';
 import BottomBar from '@/components/BottomBar';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 
 export default function SettingsScreen() {
   const { theme, colors, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
+  const { signOut } = useAuth();
+  const { user } = useUser();
 
-  const SettingItem = ({ icon, title, value, onPress, showToggle = false, showChevron = true }) => (
+  type SettingItemProps = {
+    icon: React.ReactNode;
+    title: string;
+    value?: any;
+    onPress: () => void;
+    showToggle?: boolean;
+    showChevron?: boolean;
+  };
+
+  const SettingItem: React.FC<SettingItemProps> = ({
+    icon,
+    title,
+    value,
+    onPress,
+    showToggle = false,
+    showChevron = true,
+  }) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       {icon}
       <Text style={styles.settingTitle}>{title}</Text>
@@ -42,7 +61,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-       <BackButton />
+      <BackButton />
       <LinearGradient
         colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
@@ -54,15 +73,15 @@ export default function SettingsScreen() {
         <View style={styles.profileSection}>
           <TouchableOpacity style={styles.profileImageContainer}>
             <Image
-              source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
+              source={{ uri: user?.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
               style={styles.profileImage}
             />
             <View style={styles.cameraButton}>
               <Camera color={Colors.light.primary} size={20} />
             </View>
           </TouchableOpacity>
-          <Text style={styles.profileName}>RONALDO</Text>
-          <Text style={styles.profileEmail}>ronaldo@example.com</Text>
+          <Text style={styles.profileName}>{user?.fullName || 'Usuário'}</Text>
+          <Text style={styles.profileEmail}>{user?.primaryEmailAddress?.emailAddress || ''}</Text>
         </View>
 
         <View style={styles.section}>
@@ -98,16 +117,22 @@ export default function SettingsScreen() {
           <SettingItem
             icon={<Lock color={Colors.light.primary} size={24} />}
             title="Privacidade"
-            onPress={() => {}}
-          />
+            onPress={() => { } } value={undefined}          />
           <SettingItem
             icon={<Database color={Colors.light.primary} size={24} />}
             title="Dados do Aplicativo"
-            onPress={() => {}}
-          />
+            onPress={() => { } } value={undefined}          />
+        </View>
+
+        <View style={styles.section}>
+          <SettingItem
+            icon={<LogOut color={Colors.light.primary} size={24} />}
+            title="Sair"
+            onPress={signOut}
+            showChevron={false} value={undefined}          />
         </View>
       </ScrollView>
-      <BottomBar/>
+      <BottomBar />
     </SafeAreaView>
   );
 }
