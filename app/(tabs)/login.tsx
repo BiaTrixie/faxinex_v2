@@ -10,10 +10,12 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSignIn, useAuth } from '@clerk/clerk-expo';
+import { useSignIn, useAuth, useOAuth } from '@clerk/clerk-expo';
 import { signInWithCustomToken } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
@@ -22,10 +24,30 @@ import SocialButton from '@/components/SocialButton';
 import Colors from '@/constants/Colors';
 import { auth, firestore } from '@/FirebaseConfig';
 
+// Necessário para OAuth funcionar (apenas mobile)
+if (Platform.OS !== 'web') {
+  WebBrowser.maybeCompleteAuthSession();
+}
+
+// Hook para otimizar a experiência do usuário (apenas mobile)
+const useWarmUpBrowser = () => {
+  React.useEffect(() => {
+    // Pré-carrega o navegador apenas em plataformas móveis
+    if (Platform.OS !== 'web') {
+      void WebBrowser.warmUpAsync();
+      return () => {
+        void WebBrowser.coolDownAsync();
+      };
+    }
+  }, []);
+};
+
 export default function LoginScreen() {
+  useWarmUpBrowser();
   const router = useRouter();
   const { signIn, setActive } = useSignIn();
   const { getToken } = useAuth();
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,7 +83,6 @@ export default function LoginScreen() {
 
         const userCredential = await signInWithCustomToken(auth, token);
 
-        // Verifica se o usuário já existe no Firestore
         const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
         const userDoc = await getDoc(userDocRef);
 
@@ -101,41 +122,56 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      const result = await signIn?.authenticateWithRedirect({
-        strategy: 'oauth_google',
-        redirectUrl: 'http://localhost:8081',
-        redirectUrlComplete: 'http://localhost:8081', 
-      });
+      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow();
 
+      if (createdSessionId) {
+        if (setActive) {
+          await setActive({ session: createdSessionId });
+        }
 
-      const token = await getToken({ template: 'integration_firebase' });
-      if (!token) throw new Error('Não foi possível obter o token de autenticação.');
+        const token = await getToken({ template: 'integration_firebase' });
+        if (!token) throw new Error('Não foi possível obter o token de autenticação.');
 
-      const userCredential = await signInWithCustomToken(auth, token);
+        const userCredential = await signInWithCustomToken(auth, token);
 
-      const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
-      const userDoc = await getDoc(userDocRef);
+        const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
+        const userDoc = await getDoc(userDocRef);
 
-      if (!userDoc.exists()) {
-        const name = userCredential.user.displayName || 'Usuário';
-        const email = userCredential.user.email || '';
-        const imageUrl =
-          userCredential.user.photoURL ||
-          'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg';
+        if (!userDoc.exists()) {
+          const name = userCredential.user.displayName || 'Usuário';
+          const email = userCredential.user.email || '';
+          const imageUrl =
+            userCredential.user.photoURL ||
+            'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg';
 
-        await setDoc(userDocRef, {
-          id: userCredential.user.uid,
-          name,
-          email,
-          group_id: null,
-          image: imageUrl.trim(),
-          isAdmin: false,
-          createdAt: new Date(),
-        });
+          await setDoc(userDocRef, {
+            id: userCredential.user.uid,
+            name,
+            email,
+            group_id: null,
+            image: imageUrl.trim(),
+            isAdmin: false,
+            createdAt: new Date(),
+          });
+        }
+
+        setIsLoading(false);
+        router.push('/home');
+      } else {
+        // Se não houver createdSessionId, pode ser necessário lidar com etapas adicionais
+        // como MFA ou completar o processo de inscrição
+        if (signUp) {
+          // Usuario novo - processo de inscrição
+          console.log('Novo usuário, completando inscrição...');
+          // Você pode adicionar lógica adicional aqui se necessário
+        } else if (signIn) {
+          // Usuario existente - processo de login
+          console.log('Usuário existente, completando login...');
+          // Você pode adicionar lógica adicional aqui se necessário
+        }
+        setIsLoading(false);
+        throw new Error('Falha ao completar o processo de autenticação.');
       }
-
-      setIsLoading(false);
-      router.push('/home');
     } catch (err: any) {
       setIsLoading(false);
       Toast.show({
