@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const sendEmail = async (to: string, groupId: string) => {
+const sendEmail = async (to: string, groupId: string) => {
   try {
     const response = await axios.post('https://backend-faxinex.vercel.app/send', {
       to: to,
@@ -23,3 +23,5 @@ Equipe Faxinex`,
     throw new Error(error.response?.data?.error || 'Erro ao enviar o email');
   }
 };
+
+export default sendEmail;

@@ -4,11 +4,20 @@ import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '../hooks/useFrameworkReady';
 import Toast from 'react-native-toast-message';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import { ClerkProvider } from '@clerk/clerk-expo'
+import { tokenCache } from '@clerk/clerk-expo/token-cache'
 
 export default function RootLayout() {
   useFrameworkReady();
 
+  const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!
+
+  if (!publishableKey) {
+    throw new Error('Missing Publishable Key. Please set EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env')
+  }
+
  return (
+   <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
     <ThemeProvider>
       <>
         <Stack screenOptions={{ headerShown: false }}>
@@ -18,5 +27,6 @@ export default function RootLayout() {
         <Toast />
       </>
     </ThemeProvider>
+    </ClerkProvider>
   );
 }
