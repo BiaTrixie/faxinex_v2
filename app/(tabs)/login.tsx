@@ -44,7 +44,7 @@ export default function LoginScreen() {
   useWarmUpBrowser();
   const router = useRouter();
   const { signIn, setActive } = useSignIn();
-  const { getToken } = useAuth();
+  const { getToken, signOut } = useAuth(); // <-- adicione signOut aqui
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
   const [email, setEmail] = useState('');
@@ -66,6 +66,8 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
+      await signOut(); // <-- adicione esta linha
+
       const signInAttempt = await signIn?.create({
         identifier: email,
         password,
@@ -120,6 +122,8 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
+      await signOut(); // <-- adicione esta linha
+
       const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow();
 
       if (createdSessionId) {
