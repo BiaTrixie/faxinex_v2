@@ -15,7 +15,6 @@ import { signInWithCustomToken } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 
 import Logo from '@/components/Logo';
 import TextInput from '@/components/TextInput';
@@ -24,7 +23,6 @@ import SocialButton from '@/components/SocialButton';
 import Colors from '@/constants/Colors';
 import { auth, firestore } from '@/FirebaseConfig';
 
-// Necessário para OAuth funcionar (apenas mobile)
 if (Platform.OS !== 'web') {
   WebBrowser.maybeCompleteAuthSession();
 }
