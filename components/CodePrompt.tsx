@@ -1,3 +1,4 @@
+import { useTheme } from '@/contexts/ThemeContext';
 import React, { useState } from 'react';
 import {
   Modal,
@@ -7,47 +8,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  useColorScheme,
 } from 'react-native';
-
+import Colors from '@/constants/Colors';
 const { width } = Dimensions.get('window');
-
-const colors = {
-  light: {
-    primary: '#5E75F2',
-    lightBlue1: '#668CD9',
-    lightBlue2: '#73B2D9',
-    lightGreen: '#73BFAA',
-    text: '#333333',
-    background: '#FFFFFF',
-    tint: '#5E75F2',
-    tabIconDefault: '#ccc',
-    tabIconSelected: '#5E75F2',
-    icon: '#fff',
-    overlay: 'rgba(0, 0, 0, 0.5)',
-    inputBackground: '#F8F9FA',
-    inputBorder: '#E1E5E9',
-    inputText: '#333333',
-    secondaryText: '#6B7280',
-  },
-  dark: {
-    primary: '#5E75F2',
-    lightBlue1: '#668CD9',
-    lightBlue2: '#73B2D9',
-    lightGreen: '#73BFAA',
-    text: '#FFFFFF',
-    background: '#1A1A1A',
-    tint: '#5E75F2',
-    tabIconDefault: '#ccc',
-    tabIconSelected: '#5E75F2',
-    icon: '#73B2D9',
-    overlay: 'rgba(0, 0, 0, 0.7)',
-    inputBackground: '#2A2A2A',
-    inputBorder: '#404040',
-    inputText: '#FFFFFF',
-    secondaryText: '#9CA3AF',
-  },
-};
 
 type CodePromptProps = {
   visible: boolean;
@@ -61,8 +24,7 @@ const CodePrompt: React.FC<CodePromptProps> = ({
   onCancel,
 }) => {
   const [code, setCode] = useState('');
-  const colorScheme = useColorScheme();
-  const theme = colors[colorScheme || 'light'];
+  const { theme, colors } = useTheme();
 
   const handleSubmit = () => {
     if (code.trim()) {
@@ -78,13 +40,13 @@ const CodePrompt: React.FC<CodePromptProps> = ({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={[styles.overlay, { backgroundColor: theme.overlay }]}>
-        <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
+            <Text style={[styles.title, { color: colors.primary }]}>
               Verificação de Código
             </Text>
-            <Text style={[styles.subtitle, { color: theme.secondaryText }]}>
+            <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
               Digite o código de 6 dígitos enviado para seu email
             </Text>
           </View>
@@ -94,15 +56,15 @@ const CodePrompt: React.FC<CodePromptProps> = ({
               value={code}
               onChangeText={setCode}
               placeholder="000000"
-              placeholderTextColor={theme.secondaryText}
+              placeholderTextColor={colors.secondaryText}
               keyboardType="number-pad"
               maxLength={6}
               style={[
                 styles.input,
                 {
-                  backgroundColor: theme.inputBackground,
-                  borderColor: theme.inputBorder,
-                  color: theme.inputText,
+                  backgroundColor: '#F5F5F5',
+                  borderColor: colors.primary,
+                  color: colors.primary,
                 },
               ]}
               textAlign="center"
@@ -114,7 +76,7 @@ const CodePrompt: React.FC<CodePromptProps> = ({
               style={[
                 styles.button,
                 styles.primaryButton,
-                { backgroundColor: theme.primary },
+                { backgroundColor: colors.primary },
               ]}
               onPress={handleSubmit}
               activeOpacity={0.8}
@@ -126,7 +88,7 @@ const CodePrompt: React.FC<CodePromptProps> = ({
               style={[
                 styles.button,
                 styles.secondaryButton,
-                { borderColor: theme.inputBorder },
+                { borderColor: colors.primary },
               ]}
               onPress={handleCancel}
               activeOpacity={0.8}
@@ -134,7 +96,7 @@ const CodePrompt: React.FC<CodePromptProps> = ({
               <Text
                 style={[
                   styles.secondaryButtonText,
-                  { color: theme.secondaryText },
+                  { color: colors.primary },
                 ]}
               >
                 Cancelar
@@ -142,9 +104,9 @@ const CodePrompt: React.FC<CodePromptProps> = ({
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.footerText, { color: theme.secondaryText }]}>
+          <Text style={[styles.footerText, { color: colors.secondaryText }]}>
             Não recebeu o código?{' '}
-            <Text style={[styles.linkText, { color: theme.primary }]}>
+            <Text style={[styles.linkText, { color: colors.primary }]}>
               Reenviar
             </Text>
           </Text>
@@ -179,17 +141,6 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 32,
-  },
-  headerIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  headerIconText: {
-    fontSize: 28,
   },
   title: {
     fontSize: 24,

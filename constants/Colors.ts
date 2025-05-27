@@ -10,7 +10,7 @@ export default {
     tabIconDefault: '#ccc',
     tabIconSelected: '#5E75F2',
     icon: '#fff',
-    secondaryText : '#fff',
+    secondaryText : '#808080',
   },
   dark: {
     primary: '#5E75F2',
