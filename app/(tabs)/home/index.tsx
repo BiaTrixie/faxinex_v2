@@ -152,18 +152,21 @@ export default function HomeScreen() {
               variant={selectedTab === 'todas' ? 'primary' : 'outline'}
               onPress={() => setSelectedTab('todas')}
               style={styles.menuButton}
+              textStyle={styles.menuButtonText}
             />
             <Button
               title="Pendentes"
               variant={selectedTab === 'Pendente' ? 'primary' : 'outline'}
               onPress={() => setSelectedTab('Pendente')}
               style={styles.menuButton}
+              textStyle={styles.menuButtonText}
             />
             <Button
               title="Finalizadas"
               variant={selectedTab === 'Finalizada' ? 'primary' : 'outline'}
               onPress={() => setSelectedTab('Finalizada')}
               style={styles.menuButton}
+              textStyle={styles.menuButtonText}
             />
           </View>
 
@@ -256,10 +259,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 25,
     gap: 10,
+    alignItems: 'center',
   },
   menuButton: {
     flex: 1,
     marginHorizontal: 2,
+    minWidth: 0,
+    maxWidth: '33%',
+  },
+  menuButtonText: {
+    flexShrink: 1,
+    flexWrap: 'nowrap',
+    textAlign: 'center',
+    fontSize: 12,
+    includeFontPadding: false,
   },
   noTasksContainer: {
     alignItems: 'center',

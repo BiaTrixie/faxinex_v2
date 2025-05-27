@@ -10,7 +10,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme].tint,
-        tabBarStyle: { display: 'none' }, // Hide the tab bar as we'll use custom navigation
+        tabBarStyle: { display: 'none' }, 
         headerShown: false,
       }}>
       <Tabs.Screen

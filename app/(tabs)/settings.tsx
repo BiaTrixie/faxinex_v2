@@ -215,7 +215,6 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <BackButton />
       <LinearGradient
         colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
