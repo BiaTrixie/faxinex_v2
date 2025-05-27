@@ -80,7 +80,7 @@ export default function SettingsScreen() {
               <Camera color={Colors.light.primary} size={20} />
             </View>
           </TouchableOpacity>
-          <Text style={styles.profileName}>{user?.fullName || 'Usuário'}</Text>
+          <Text style={styles.profileName}>{user?.firstName || user?.username ||  'Usuário'}</Text>
           <Text style={styles.profileEmail}>{user?.primaryEmailAddress?.emailAddress || ''}</Text>
         </View>
 

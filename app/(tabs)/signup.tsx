@@ -51,13 +51,13 @@ export default function SignUpScreen() {
     setIsLoading(true);
 
     try {
-      // Faz signOut do Clerk antes de criar novo usuário
       await signOut();
 
-      await signUp?.create({
-        emailAddress: email,
-        password,
-      });
+     await signUp?.create({
+      emailAddress: email,
+      password,
+      username: name, 
+    });
 
       await signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
 
@@ -143,7 +143,7 @@ export default function SignUpScreen() {
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Nome"
+              placeholder="Primeiro Nome"
               error={errors.name}
               autoCapitalize="words"
             />
@@ -160,12 +160,6 @@ export default function SignUpScreen() {
               placeholder="Senha"
               secureTextEntry
               error={errors.password}
-            />
-            <TextInput
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              placeholder="URL da imagem (opcional)"
-              error={errors.imageUrl}
             />
             <Button title="REGISTRAR" onPress={handleSignUp} loading={isLoading} style={styles.signUpButton} />
             <TouchableOpacity onPress={goToLogin} style={styles.loginLink}>

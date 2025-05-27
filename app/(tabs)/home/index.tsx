@@ -4,6 +4,7 @@ import ProjectCard from '@/components/ProjectCard';
 import Colors from '@/constants/Colors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { auth, firestore } from '@/FirebaseConfig';
+import { useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { doc, getDoc } from 'firebase/firestore';
 import { Settings } from 'lucide-react-native';
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const [groupName, setGroupName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
+  const { user } = useUser();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -49,7 +51,7 @@ export default function HomeScreen() {
             user.photoURL ||
             'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
           );
-          // Buscar nome do grupo se houver group_id
+         
           if (data.group_id) {
             const groupDoc = await getDoc(doc(db, 'groups', data.group_id));
             if (groupDoc.exists()) {
@@ -68,7 +70,7 @@ export default function HomeScreen() {
 
     const fetchTasks = async () => {
       try {
-        const response = await fetch('https://backend-faxinex.vercel.app/tasks'); // Altere para sua URL real
+        const response = await fetch('https://backend-faxinex.vercel.app/tasks'); 
         const task = await response.json();
         console.log(task);
         setTasks(task);
@@ -101,7 +103,6 @@ export default function HomeScreen() {
     }
   }
 
-  // Filtra tasks do grupo atribuídas ao usuário logado
   const userTasks = tasks.filter(
     (task) =>
       groupId &&
@@ -118,10 +119,10 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.userInfo}>
           <Image
-            source={{ uri: userPhoto || 'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg' }}
+            source={{ uri: user?.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
             style={styles.avatar}
           />
-          <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{user?.firstName || user?.username ||  'Usuário'}</Text>
           <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
             <Settings color={colors.icon} size={24} />
           </TouchableOpacity>
