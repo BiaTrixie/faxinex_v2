@@ -6,21 +6,22 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { auth, firestore } from '@/FirebaseConfig';
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import GroupChoiceModal from '@/components/GroupChoiceModal';
+import JoinGroupModal from '@/components/JoinGroupModal';
 
 export interface Task {
   id: string,
   taskName: string;
-  difficulty: number; // alguns são strings, outros são números
+  difficulty: number;
   participants: string[];
   category: string;
   idGroup: string;
   status: 'Pendente' | 'Finalizada' | string;
 }
-
 
 export default function HomeScreen() {
   const { theme, colors } = useTheme();
@@ -31,6 +32,12 @@ export default function HomeScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [groupName, setGroupName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  
+  // Estados dos modais
+  const [showGroupChoiceModal, setShowGroupChoiceModal] = useState(false);
+  const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
+  const [isJoiningGroup, setIsJoiningGroup] = useState(false);
+  
   const router = useRouter();
   const { user } = useUser();
 
@@ -84,6 +91,67 @@ export default function HomeScreen() {
     fetchTasks();
   }, []);
 
+  // Função para mostrar o modal de escolha de grupo
+  const handleShowGroupOptions = () => {
+    setShowGroupChoiceModal(true);
+  };
+
+  // Função para criar novo grupo
+  const handleCreateGroup = () => {
+    setShowGroupChoiceModal(false);
+    router.push('/groups/create');
+  };
+
+  // Função para mostrar modal de entrar no grupo
+  const handleShowJoinGroup = () => {
+    setShowGroupChoiceModal(false);
+    setShowJoinGroupModal(true);
+  };
+
+  // Função para entrar no grupo
+  const handleJoinGroup = async (groupIdToJoin: string) => {
+    if (!userId) {
+      Alert.alert('Erro', 'Usuário não encontrado');
+      return;
+    }
+
+    setIsJoiningGroup(true);
+    
+    try {
+      // Verificar se o grupo existe
+      const groupDoc = await getDoc(doc(firestore, 'groups', groupIdToJoin));
+      
+      if (!groupDoc.exists()) {
+        Alert.alert('Erro', 'Grupo não encontrado. Verifique o ID do grupo.');
+        return;
+      }
+
+      // Atualizar o usuário com o novo group_id
+      const userDocRef = doc(firestore, 'users', userId);
+      await updateDoc(userDocRef, {
+        group_id: groupIdToJoin
+      });
+
+      // Atualizar os estados locais
+      setGroupId(groupIdToJoin);
+      setGroupName(groupDoc.data().name);
+      setShowJoinGroupModal(false);
+
+      Alert.alert('Sucesso', 'Você entrou no grupo com sucesso!');
+    } catch (error) {
+      console.error('Erro ao entrar no grupo:', error);
+      Alert.alert('Erro', 'Não foi possível entrar no grupo. Tente novamente.');
+    } finally {
+      setIsJoiningGroup(false);
+    }
+  };
+
+  // Função para cancelar operações dos modais
+  const handleCancelModals = () => {
+    setShowGroupChoiceModal(false);
+    setShowJoinGroupModal(false);
+  };
+
   const filteredTasks = tasks.filter(task => {
     if (selectedTab === 'todas') return true;
     if (selectedTab === 'Pendente') return task.status === 'Pendente';
@@ -91,11 +159,11 @@ export default function HomeScreen() {
     return true;
   });
 
-  const nomeDificuldade = (id:number) => {
-    if(id === 1){
+  const nomeDificuldade = (id: number) => {
+    if (id === 1) {
       return "Fácil"
     }
-    else if(id === 2){
+    else if (id === 2) {
       return "Média"
     }
     else {
@@ -122,7 +190,7 @@ export default function HomeScreen() {
             source={{ uri: user?.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
             style={styles.avatar}
           />
-          <Text style={[styles.userName, { color: colors.text }]}>{user?.firstName || user?.username ||  'Usuário'}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{user?.firstName || user?.username || 'Usuário'}</Text>
           <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
             <Settings color={colors.icon} size={24} />
           </TouchableOpacity>
@@ -140,7 +208,7 @@ export default function HomeScreen() {
         ) : (
           <ProjectCard
             groupId={groupId}
-            onAddGroup={() => router.push('/groups/create')}
+            onShowGroupOptions={handleShowGroupOptions}
           />
         )}
 
@@ -199,6 +267,22 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal de escolha de grupo */}
+      <GroupChoiceModal
+        visible={showGroupChoiceModal}
+        onCreateGroup={handleCreateGroup}
+        onJoinGroup={handleShowJoinGroup}
+        onCancel={handleCancelModals}
+      />
+
+      {/* Modal para entrar no grupo */}
+      <JoinGroupModal
+        visible={showJoinGroupModal}
+        onJoinGroup={handleJoinGroup}
+        onCancel={handleCancelModals}
+        loading={isJoiningGroup}
+      />
 
       <BottomBar />
     </SafeAreaView>

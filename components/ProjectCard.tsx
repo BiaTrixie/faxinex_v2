@@ -11,7 +11,7 @@ interface ProjectCardProps {
   progress?: number;
   empty?: boolean;
   groupId?: string | null;
-  onAddGroup?: () => void;
+  onShowGroupOptions?: () => void; // Mudança: agora chama o modal de opções
 }
 
 export default function ProjectCard({ 
@@ -21,24 +21,27 @@ export default function ProjectCard({
   progress, 
   empty = false,
   groupId,
-  onAddGroup,
+  onShowGroupOptions, // Mudança: novo nome da prop
 }: ProjectCardProps) {
   // Se groupId for vazio ou nulo, mostra mensagem e botão de adicionar grupo
   if (!groupId) {
     return (
-      <LinearGradient
-        colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyTitle}>Você ainda não participa de um grupo</Text>
-          <TouchableOpacity style={styles.addButton} onPress={onAddGroup}>
-            <Plus color="#FFF" size={24} />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
+      <TouchableOpacity onPress={onShowGroupOptions} activeOpacity={0.8}>
+        <LinearGradient
+          colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
+          style={styles.container}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.emptyContent}>
+            <Text style={styles.emptyTitle}>Você ainda não participa de um grupo</Text>
+            <Text style={styles.emptySubtitle}>Clique para criar ou entrar em um grupo</Text>
+            <View style={styles.addButton}>
+              <Plus color="#FFF" size={24} />
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
     );
   }
 
@@ -111,15 +114,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   emptySubtitle: {
     color: '#FFF',
     fontSize: 14,
     textAlign: 'center',
+    marginBottom: 15,
   },
   addButton: {
-    marginTop: 10,
     backgroundColor: Colors.light.primary,
     borderRadius: 20,
     padding: 10,
