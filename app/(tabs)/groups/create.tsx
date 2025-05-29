@@ -39,28 +39,7 @@ export default function CreateGroupScreen() {
           onChangeText={setDescription}
           placeholder="Descrição"
           style={styles.input}
-          multiline
         />
-
-        <View style={styles.membersSection}>
-          <Text style={styles.sectionTitle}>Participantes</Text>
-          <View style={styles.membersList}>
-            <View style={styles.memberItem}>
-              <Image
-                source={{ uri: 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
-                style={styles.memberAvatar}
-              />
-              <Text style={styles.memberName}>RONALDO</Text>
-            </View>
-            <Button
-              title="+ ADICIONAR"
-              onPress={() => {}}
-              variant="outline"
-              style={styles.addButton}
-            />
-          </View>
-        </View>
-
         <Button
           title="CRIAR GRUPO"
           onPress={handleCreateGroup}

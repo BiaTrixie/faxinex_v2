@@ -11,13 +11,17 @@ interface ProjectCardProps {
   totalTasks?: number;
   progress?: number;
   empty?: boolean;
-  groupId?: string | null;
-  onShowGroupOptions?: () => void; // Mudança: agora chama o modal de opções
+  onShowGroupOptions?: () => void; 
+  onPress?: () => void; 
 }
 
 export default function ProjectCard({ 
   groupId,
-  onShowGroupOptions, // Mudança: novo nome da prop
+  groupName,
+  completedTasks = 0,
+  totalTasks = 0,
+  onShowGroupOptions,
+  onPress,
 }: ProjectCardProps) {
   if (!groupId) {
     return (
@@ -112,7 +116,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 15,
     marginBottom: 15,
   },
   addButton: {
