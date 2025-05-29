@@ -17,6 +17,7 @@ export interface Task {
   id: string,
   taskName: string;
   difficulty: number;
+  difficulty: number;
   participants: string[];
   category: string;
   idGroup: string;
@@ -49,7 +50,7 @@ export default function HomeScreen() {
         setUserId(user.uid);
         setUserName(user.displayName || user.email || 'Usuário não encontrado');
         const db = firestore;
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDoc = await getDoc(doc(db, 'Users', user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
           setGroupId(data.group_id ?? null);
@@ -62,25 +63,24 @@ export default function HomeScreen() {
           if (data.group_id) {
             const groupDoc = await getDoc(doc(db, 'groups', data.group_id));
             if (groupDoc.exists()) {
-              setGroupName(groupDoc.data().name);
+              const groupData = groupDoc.data() as Group;
+              setGroupName(groupData.name);
+              setCurrentGroup(groupData);
             }
           }
-        } else {
-          setGroupId(null);
-          setUserPhoto(
-            user.photoURL ||
-            'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
-          );
         }
       }
     };
 
     const fetchTasks = async () => {
+      if (!groupId) return;
+      
       try {
-        const response = await fetch('https://backend-faxinex.vercel.app/tasks'); 
-        const task = await response.json();
-        console.log(task);
-        setTasks(task);
+        const response = await fetch('https://backend-faxinex.vercel.app/tasks');
+        const allTasks = await response.json();
+        // Filter tasks for current group
+        const groupTasks = allTasks.filter((task: Task) => task.idGroup === groupId);
+        setTasks(groupTasks);
       } catch (error) {
         console.error('Erro ao buscar tasks:', error);
         setTasks([]);
@@ -212,60 +212,38 @@ export default function HomeScreen() {
           />
         )}
 
-        <View style={styles.tasksContainer}>
-          <Text style={[styles.tasksTitle, { color: colors.primary }]}>TAREFAS</Text>
-          <View style={styles.menuBar}>
-            <Button
-              title="Todas"
-              variant={selectedTab === 'todas' ? 'primary' : 'outline'}
-              onPress={() => setSelectedTab('todas')}
-              style={styles.menuButton}
-              textStyle={styles.menuButtonText}
-            />
-            <Button
-              title="Pendentes"
-              variant={selectedTab === 'Pendente' ? 'primary' : 'outline'}
-              onPress={() => setSelectedTab('Pendente')}
-              style={styles.menuButton}
-              textStyle={styles.menuButtonText}
-            />
-            <Button
-              title="Finalizadas"
-              variant={selectedTab === 'Finalizada' ? 'primary' : 'outline'}
-              onPress={() => setSelectedTab('Finalizada')}
-              style={styles.menuButton}
-              textStyle={styles.menuButtonText}
-            />
-          </View>
-
-          {filteredTasks.length > 0 ? (
-            filteredTasks.map((task, index) => (
-              <View
-                key={index}
-                style={{
-                  marginBottom: 15,
-                  padding: 15,
-                  backgroundColor: task.difficulty === 1 ? 'green' : task.difficulty === 2 ? '#eead2d' : 'red',
-                  borderRadius: 8,
-                }}
-              >
-                <Text style={{ fontWeight: 'bold', color: colors.text }}>{task.taskName}</Text>
-                <Text style={{ color: colors.text, marginTop: 5 }}>
-                  Dificuldade: {nomeDificuldade(task.difficulty)} | Status: {task.status === 'Pendente' ? 'Pendente' : 'Finalizada'}
-                </Text>
+        {groupId && (
+          <View style={styles.tasksContainer}>
+            <Text style={[styles.tasksTitle, { color: colors.primary }]}>TAREFAS</Text>
+            {tasks.length > 0 ? (
+              tasks.map((task, index) => (
+                <View
+                  key={index}
+                  style={{
+                    marginBottom: 15,
+                    padding: 15,
+                    backgroundColor: task.difficulty === 1 ? 'green' : task.difficulty === 2 ? '#eead2d' : 'red',
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ fontWeight: 'bold', color: colors.text }}>{task.taskName}</Text>
+                  <Text style={{ color: colors.text, marginTop: 5 }}>
+                    Status: {task.status}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.noTasksContainer}>
+                <Text style={[styles.noTasksText, { color: colors.text }]}>Nenhuma tarefa criada ainda</Text>
+                <Button
+                  title="Criar Tarefa"
+                  onPress={() => router.push('/tasks/create')}
+                  style={styles.addTaskButton}
+                />
               </View>
-            ))
-          ) : (
-            <View style={styles.noTasksContainer}>
-              <Text style={[styles.noTasksText, { color: colors.text }]}>Você ainda não tem tarefas criadas</Text>
-              <Button
-                title="Adicionar Tarefa"
-                onPress={() => router.push('/tasks/create')}
-                style={styles.addTaskButton}
-              />
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       {/* Modal de escolha de grupo */}
@@ -338,26 +316,6 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
     marginBottom: 15,
   },
-  menuBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 25,
-    gap: 10,
-    alignItems: 'center',
-  },
-  menuButton: {
-    flex: 1,
-    marginHorizontal: 2,
-    minWidth: 0,
-    maxWidth: '33%',
-  },
-  menuButtonText: {
-    flexShrink: 1,
-    flexWrap: 'nowrap',
-    textAlign: 'center',
-    fontSize: 12,
-    includeFontPadding: false,
-  },
   noTasksContainer: {
     alignItems: 'center',
     marginTop: 30,
@@ -369,5 +327,35 @@ const styles = StyleSheet.create({
   },
   addTaskButton: {
     minWidth: 180,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: Colors.light.primary,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 15,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
   },
 });

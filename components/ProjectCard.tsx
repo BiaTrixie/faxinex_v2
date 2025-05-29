@@ -5,7 +5,8 @@ import Colors from '@/constants/Colors';
 import { Plus } from 'lucide-react-native';
 
 interface ProjectCardProps {
-  title?: string;
+  groupId?: string | null;
+  groupName?: string | null;
   completedTasks?: number;
   totalTasks?: number;
   progress?: number;
@@ -15,15 +16,9 @@ interface ProjectCardProps {
 }
 
 export default function ProjectCard({ 
-  title, 
-  completedTasks, 
-  totalTasks, 
-  progress, 
-  empty = false,
   groupId,
   onShowGroupOptions, // Mudança: novo nome da prop
 }: ProjectCardProps) {
-  // Se groupId for vazio ou nulo, mostra mensagem e botão de adicionar grupo
   if (!groupId) {
     return (
       <TouchableOpacity onPress={onShowGroupOptions} activeOpacity={0.8}>
@@ -46,29 +41,26 @@ export default function ProjectCard({
   }
 
   return (
-    <LinearGradient
-      colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      {empty ? (
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyTitle}>Você ainda não tem projetos</Text>
-          <Text style={styles.emptySubtitle}>Clique aqui para adicionar</Text>
-        </View>
-      ) : (
+    <TouchableOpacity onPress={onPress}>
+      <LinearGradient
+        colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
         <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{groupName || 'Meu Grupo'}</Text>
           <View style={styles.statsContainer}>
             <Text style={styles.stats}>
-              {completedTasks}/{totalTasks}
+              Tarefas: {completedTasks}/{totalTasks}
             </Text>
-            <Text style={styles.progress}>{progress}%</Text>
+            <Text style={styles.progress}>
+              {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+            </Text>
           </View>
         </View>
-      )}
-    </LinearGradient>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 }
 
@@ -120,6 +112,7 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     textAlign: 'center',
+    marginBottom: 15,
     marginBottom: 15,
   },
   addButton: {
