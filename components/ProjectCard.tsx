@@ -5,67 +5,64 @@ import Colors from '@/constants/Colors';
 import { Plus } from 'lucide-react-native';
 
 interface ProjectCardProps {
-  title?: string;
+  groupId?: string | null;
+  groupName?: string | null;
   completedTasks?: number;
   totalTasks?: number;
-  progress?: number;
-  empty?: boolean;
-  groupId?: string | null;
+  onPress?: () => void;
   onAddGroup?: () => void;
 }
 
 export default function ProjectCard({ 
-  title, 
-  completedTasks, 
-  totalTasks, 
-  progress, 
-  empty = false,
   groupId,
+  groupName,
+  completedTasks = 0,
+  totalTasks = 0,
+  onPress,
   onAddGroup,
 }: ProjectCardProps) {
-  // Se groupId for vazio ou nulo, mostra mensagem e botão de adicionar grupo
   if (!groupId) {
     return (
+      <TouchableOpacity onPress={onAddGroup}>
+        <LinearGradient
+          colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
+          style={styles.container}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.emptyContent}>
+            <Text style={styles.emptyTitle}>Você ainda não participa de um grupo</Text>
+            <Text style={styles.emptySubtitle}>Clique para criar ou entrar em um grupo</Text>
+            <View style={styles.addButton}>
+              <Plus color="#FFF" size={24} />
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity onPress={onPress}>
       <LinearGradient
         colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyTitle}>Você ainda não participa de um grupo</Text>
-          <TouchableOpacity style={styles.addButton} onPress={onAddGroup}>
-            <Plus color="#FFF" size={24} />
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    );
-  }
-
-  return (
-    <LinearGradient
-      colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
-      {empty ? (
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyTitle}>Você ainda não tem projetos</Text>
-          <Text style={styles.emptySubtitle}>Clique aqui para adicionar</Text>
-        </View>
-      ) : (
         <View style={styles.content}>
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{groupName || 'Meu Grupo'}</Text>
           <View style={styles.statsContainer}>
             <Text style={styles.stats}>
-              {completedTasks}/{totalTasks}
+              Tarefas: {completedTasks}/{totalTasks}
             </Text>
-            <Text style={styles.progress}>{progress}%</Text>
+            <Text style={styles.progress}>
+              {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+            </Text>
           </View>
         </View>
-      )}
-    </LinearGradient>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 }
 
@@ -117,9 +114,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 14,
     textAlign: 'center',
+    marginBottom: 15,
   },
   addButton: {
-    marginTop: 10,
     backgroundColor: Colors.light.primary,
     borderRadius: 20,
     padding: 10,
