@@ -5,7 +5,7 @@ import Colors from '@/constants/Colors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { auth, firestore } from '@/FirebaseConfig';
 import { useUser } from '@clerk/clerk-expo';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -41,52 +41,50 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const authentication = auth;
-      const user = authentication.currentUser;
-      if (user) {
-        setUserId(user.uid);
-        setUserName(user.displayName || user.email || 'Usuário não encontrado');
-        const db = firestore;
-        const userDoc = await getDoc(doc(db, 'Users', user.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setGroupId(data.group_id ?? null);
-          setUserPhoto(
-            data.image ||
-            user.photoURL ||
-            'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
-          );
-         
-          if (data.group_id) {
-            const groupDoc = await getDoc(doc(db, 'Groups', data.group_id));
-            if (groupDoc.exists()) {
-              const groupData = groupDoc.data();
-              setGroupName(groupData.name);
-            }
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchUserData = async () => {
+        const authentication = auth;
+        const user = authentication.currentUser;
+        if (user) {
+          setUserId(user.uid);
+          setUserName(user.displayName || user.email || 'Usuário não encontrado');
+          const db = firestore;
+          const userDoc = await getDoc(doc(db, 'Users', user.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            setGroupId(data.group_id ?? null);
+            setUserPhoto(
+              data.image ||
+              user.photoURL ||
+              'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
+            );
           }
         }
+      };
+
+      fetchUserData();
+    }, [])
+  );
+
+  // Novo useEffect para buscar o nome do grupo sempre que groupId mudar
+  React.useEffect(() => {
+    const fetchGroupName = async () => {
+      if (groupId && typeof groupId === 'string' && groupId.trim() !== '') {
+        const groupDoc = await getDoc(doc(firestore, 'Groups', groupId));
+        if (groupDoc.exists()) {
+          const groupData = groupDoc.data();
+          setGroupName(groupData.name);
+        } else {
+          setGroupName(null);
+        }
+      } else {
+        setGroupName(null);
       }
     };
 
-    const fetchTasks = async () => {
-      if (!groupId) return;
-      
-      try {
-        const response = await fetch('https://backend-faxinex.vercel.app/tasks');
-        const allTasks = await response.json();
-        const groupTasks = allTasks.filter((task: Task) => task.idGroup === groupId);
-        setTasks(groupTasks);
-      } catch (error) {
-        console.error('Erro ao buscar tasks:', error);
-        setTasks([]);
-      }
-    };
-
-    fetchUserData();
-    fetchTasks();
-  }, []);
+    fetchGroupName();
+  }, [groupId]);
 
   const handleShowGroupOptions = () => {
     setShowGroupChoiceModal(true);
