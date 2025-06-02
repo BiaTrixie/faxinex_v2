@@ -94,7 +94,7 @@ export default function SignUpScreen() {
           id: userCredential.user.uid,
           name,
           email,
-          group_id: null,
+          group_id: '',
           image: imageUrl.trim() || 'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg',
           isAdmin: false,
           createdAt: new Date(),
