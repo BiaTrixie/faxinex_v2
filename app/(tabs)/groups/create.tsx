@@ -6,15 +6,67 @@ import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
+import { firestore } from '@/FirebaseConfig';
+import { collection, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser } from '@clerk/clerk-expo';
 
 export default function CreateGroupScreen() {
   const router = useRouter();
+  const { user } = useUser();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreateGroup = () => {
-    router.back();
+  const generateGroupId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let id = '';
+    for (let i = 0; i < 5; i++) {
+      id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
   };
+
+  const getUniqueGroupId = async () => {
+    let unique = false;
+    let groupId = '';
+    while (!unique) {
+      groupId = generateGroupId();
+      const docRef = doc(firestore, 'Groups', groupId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        unique = true;
+      }
+    }
+    return groupId;
+  };
+
+const handleCreateGroup = async () => {
+  if (!name.trim() || !description.trim()) return;
+  setIsLoading(true);
+  try {
+    const groupId = await getUniqueGroupId();
+    await setDoc(doc(firestore, 'Groups', groupId), {
+      id: groupId,
+      name: name.trim(),
+      description: description.trim(),
+      createdBy: user?.id || '',
+      createdAt: serverTimestamp(),
+      participants: user?.id ? [user.id] : [],
+    });
+    if (user?.id) {
+      await setDoc(
+        doc(firestore, 'Users', user.id),
+        { isAdmin: true, group_id: groupId },
+        { merge: true }
+      );
+    }
+    router.replace('/home');
+  } catch (error) {
+    console.error('Erro ao criar grupo:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -40,9 +92,11 @@ export default function CreateGroupScreen() {
           style={styles.input}
         />
         <Button
-          title="CRIAR GRUPO"
+          title={isLoading ? "CRIANDO..." : "CRIAR GRUPO"}
           onPress={handleCreateGroup}
           style={styles.createButton}
+          disabled={isLoading}
+          loading={isLoading}
         />
       </ScrollView>
       <BottomBar />

@@ -3,27 +3,32 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Colors from '@/constants/Colors';
 import { Plus } from 'lucide-react-native';
+import { Svg, Circle } from 'react-native-svg';
 
 interface ProjectCardProps {
   groupId?: string | null;
   groupName?: string | null;
   completedTasks?: number;
   totalTasks?: number;
-  progress?: number;
-  empty?: boolean;
-  onShowGroupOptions?: () => void; 
-  onPress?: () => void; 
+  userCompletedTasks?: number;
+  userTotalTasks?: number;
+  onShowGroupOptions?: () => void;
+  onPress?: () => void;
 }
 
-export default function ProjectCard({ 
+export default function ProjectCard({
   groupId,
   groupName,
   completedTasks = 0,
   totalTasks = 0,
+  userCompletedTasks = 0,
+  userTotalTasks = 0,
   onShowGroupOptions,
   onPress,
 }: ProjectCardProps) {
-  if (!groupId) {
+  const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  if (groupId == '') {
     return (
       <TouchableOpacity onPress={onShowGroupOptions} activeOpacity={0.8}>
         <LinearGradient
@@ -44,23 +49,62 @@ export default function ProjectCard({
     );
   }
 
+  const radius = 25;
+  const strokeWidth = 5;
+  const circumference = 2 * Math.PI * radius;
+  const progressStroke = circumference - (percentage / 100) * circumference;
+
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
         colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
         style={styles.container}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={styles.content}>
-          <Text style={styles.title}>{groupName || 'Meu Grupo'}</Text>
-          <View style={styles.statsContainer}>
-            <Text style={styles.stats}>
-              Tarefas: {completedTasks}/{totalTasks}
+        <Text style={styles.title}>{groupName || 'Meu Grupo'}</Text>
+
+        <View style={styles.metricsRow}>
+          <View>
+            <Text style={styles.metricLabel}>Suas tarefas</Text>
+            <Text style={styles.metricValue}>
+              {userCompletedTasks}/{userTotalTasks}
             </Text>
-            <Text style={styles.progress}>
-              {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+          </View>
+
+          <View>
+            <Text style={styles.metricLabel}>Todas tarefas</Text>
+            <Text style={styles.metricValue}>
+              {completedTasks}/{totalTasks}
             </Text>
+          </View>
+
+          <View style={styles.progressCircle}>
+            <Svg width={60} height={60}>
+              <Circle
+                cx="30"
+                cy="30"
+                r={radius}
+                stroke="#D1D8FF"
+                strokeWidth={strokeWidth}
+                fill="none"
+              />
+              <Circle
+                cx="30"
+                cy="30"
+                stroke="#5E7CE2"
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeDasharray={`${circumference}, ${circumference}`}
+                strokeDashoffset={progressStroke}
+                strokeLinecap="round"
+                rotation="-90"
+                origin="30,30"
+              />
+            </Svg>
+            <View style={styles.progressTextContainer}>
+              <Text style={styles.progressText}>{percentage}%</Text>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -76,29 +120,44 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     minHeight: 120,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
   title: {
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 15,
   },
-  statsContainer: {
+  metricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  stats: {
+  metricValue: {
     color: '#FFF',
-    fontSize: 16,
-  },
-  progress: {
-    color: '#FFF',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  metricLabel: {
+    color: '#FFF',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  progressCircle: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  progressTextContainer: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   emptyContent: {
     alignItems: 'center',

@@ -59,7 +59,7 @@ export default function HomeScreen() {
           );
          
           if (data.group_id) {
-            const groupDoc = await getDoc(doc(db, 'groups', data.group_id));
+            const groupDoc = await getDoc(doc(db, 'Groups', data.group_id));
             if (groupDoc.exists()) {
               const groupData = groupDoc.data();
               setGroupName(groupData.name);
@@ -110,7 +110,7 @@ export default function HomeScreen() {
     setIsJoiningGroup(true);
     
     try {
-      const groupDoc = await getDoc(doc(firestore, 'groups', groupIdToJoin));
+      const groupDoc = await getDoc(doc(firestore, 'Groups', groupIdToJoin));
       
       if (!groupDoc.exists()) {
         Alert.alert('Erro', 'Grupo não encontrado. Verifique o ID do grupo.');
@@ -186,20 +186,15 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {groupId ? (
-          <View style={{ marginHorizontal: 20, marginVertical: 10, padding: 20, borderRadius: 15, backgroundColor: colors.primary }}>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{groupName || 'Grupo'}</Text>
-            <Text style={{ color: '#fff', fontSize: 16, marginTop: 5 }}>
-              Minhas tarefas: {completedUserTasks.length}/{userTasks.length}
-            </Text>
-          </View>
-        ) : (
-          <ProjectCard
-            groupId={groupId}
-            onShowGroupOptions={handleShowGroupOptions}
-          />
-        )}
-
+         <ProjectCard
+          groupId={groupId}
+          groupName={groupName}
+          completedTasks={tasks.filter(t => t.status === 'Finalizada').length}
+          totalTasks={tasks.length}
+          userCompletedTasks={completedUserTasks.length}
+          userTotalTasks={userTasks.length}
+          onShowGroupOptions={handleShowGroupOptions}
+        />
         {groupId && (
           <View style={styles.tasksContainer}>
             <Text style={[styles.tasksTitle, { color: colors.primary }]}>TAREFAS</Text>
