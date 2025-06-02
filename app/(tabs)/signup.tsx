@@ -103,7 +103,7 @@ export default function SignUpScreen() {
 
         setShowCodePrompt(false);
         setIsLoading(false);
-        router.push('/home');
+        router.replace('/home');
       } else {
         throw new Error('Verificação incompleta. Código inválido?');
       }
@@ -123,7 +123,7 @@ export default function SignUpScreen() {
   };
 
   const goToLogin = () => {
-    router.push('/login');
+    router.replace('/login');
   };
 
   return (

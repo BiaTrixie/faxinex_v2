@@ -104,7 +104,7 @@ export default function LoginScreen() {
         }
 
         setIsLoading(false);
-        router.push('/home');
+        router.replace('/home');
       } else {
         throw new Error('Login incompleto. Verifique seu e-mail ou tente novamente.');
       }
@@ -158,7 +158,7 @@ export default function LoginScreen() {
         }
 
         setIsLoading(false);
-        router.push('/home');
+        router.replace('/home');
       } else {
         if (signUp) {
           console.log('Novo usuário, completando inscrição...');
@@ -179,7 +179,7 @@ export default function LoginScreen() {
   };
 
   const goToSignUp = () => {
-    router.push('/signup');
+    router.replace('/signup');
   };
 
   return (
