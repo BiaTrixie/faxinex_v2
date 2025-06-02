@@ -5,15 +5,59 @@ import { LinearGradient } from 'expo-linear-gradient';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
+import { firestore } from '@/FirebaseConfig';
+import { collection, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser } from '@clerk/clerk-expo';
 
 export default function CreateTaskScreen() {
   const router = useRouter();
+  const { user } = useUser();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreateTask = () => {
-    router.back();
+  const generateGroupId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let id = '';
+    for (let i = 0; i < 5; i++) {
+      id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+  };
+
+  const getUniqueGroupId = async () => {
+    let unique = false;
+    let groupId = '';
+    while (!unique) {
+      groupId = generateGroupId();
+      const docRef = doc(firestore, 'groups', groupId);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) {
+        unique = true;
+      }
+    }
+    return groupId;
+  };
+
+  const handleCreateTask = async () => {
+    if (!title.trim() || !description.trim()) return;
+    setIsLoading(true);
+    try {
+      const groupId = await getUniqueGroupId();
+      await setDoc(doc(firestore, 'groups', groupId), {
+        id: groupId,
+        name: title.trim(),
+        description: description.trim(),
+        createdBy: user?.id || '',
+        createdAt: serverTimestamp(),
+      });
+      router.back();
+    } catch (error) {
+      console.error('Erro ao criar tarefa:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -38,7 +82,6 @@ export default function CreateTaskScreen() {
           onChangeText={setDescription}
           placeholder="Descrição"
           style={styles.input}
-          multiline
         />
 
         <View style={styles.difficultyContainer}>
@@ -57,9 +100,11 @@ export default function CreateTaskScreen() {
         </View>
 
         <Button
-          title="CRIAR TAREFA"
+          title={isLoading ? "CRIANDO..." : "CRIAR TAREFA"}
           onPress={handleCreateTask}
           style={styles.createButton}
+          disabled={isLoading}
+          loading={isLoading}
         />
       </ScrollView>
     </SafeAreaView>

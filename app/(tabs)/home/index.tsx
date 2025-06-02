@@ -17,7 +17,6 @@ export interface Task {
   id: string,
   taskName: string;
   difficulty: number;
-  difficulty: number;
   participants: string[];
   category: string;
   idGroup: string;
@@ -25,7 +24,7 @@ export interface Task {
 }
 
 export default function HomeScreen() {
-  const { theme, colors } = useTheme();
+  const { colors } = useTheme();
   const [userName, setUserName] = useState<string>('');
   const [userPhoto, setUserPhoto] = useState<string | undefined>(undefined);
   const [groupId, setGroupId] = useState<string | null>(null);
@@ -62,9 +61,8 @@ export default function HomeScreen() {
           if (data.group_id) {
             const groupDoc = await getDoc(doc(db, 'groups', data.group_id));
             if (groupDoc.exists()) {
-              const groupData = groupDoc.data() as Group;
+              const groupData = groupDoc.data();
               setGroupName(groupData.name);
-              setCurrentGroup(groupData);
             }
           }
         }
