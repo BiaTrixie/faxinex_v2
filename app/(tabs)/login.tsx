@@ -27,10 +27,8 @@ if (Platform.OS !== 'web') {
   WebBrowser.maybeCompleteAuthSession();
 }
 
-// Hook para otimizar a experiência do usuário (apenas mobile)
 const useWarmUpBrowser = () => {
   React.useEffect(() => {
-    // Pré-carrega o navegador apenas em plataformas móveis
     if (Platform.OS !== 'web') {
       void WebBrowser.warmUpAsync();
       return () => {
@@ -44,7 +42,7 @@ export default function LoginScreen() {
   useWarmUpBrowser();
   const router = useRouter();
   const { signIn, setActive } = useSignIn();
-  const { getToken, signOut } = useAuth(); // <-- adicione signOut aqui
+  const { getToken, signOut } = useAuth(); 
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
   const [email, setEmail] = useState('');
@@ -66,7 +64,7 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      await signOut(); // <-- adicione esta linha
+      await signOut();
 
       const signInAttempt = await signIn?.create({
         identifier: email,
@@ -101,6 +99,7 @@ export default function LoginScreen() {
             image: imageUrl.trim(),
             isAdmin: false,
             createdAt: new Date(),
+            points: 0,
           });
         }
 
@@ -122,7 +121,7 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await signOut(); // <-- adicione esta linha
+      await signOut(); 
 
       const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow();
 
@@ -154,22 +153,17 @@ export default function LoginScreen() {
             image: imageUrl.trim(),
             isAdmin: false,
             createdAt: new Date(),
+            points: 0,
           });
         }
 
         setIsLoading(false);
         router.push('/home');
       } else {
-        // Se não houver createdSessionId, pode ser necessário lidar com etapas adicionais
-        // como MFA ou completar o processo de inscrição
         if (signUp) {
-          // Usuario novo - processo de inscrição
           console.log('Novo usuário, completando inscrição...');
-          // Você pode adicionar lógica adicional aqui se necessário
         } else if (signIn) {
-          // Usuario existente - processo de login
           console.log('Usuário existente, completando login...');
-          // Você pode adicionar lógica adicional aqui se necessário
         }
         setIsLoading(false);
         throw new Error('Falha ao completar o processo de autenticação.');

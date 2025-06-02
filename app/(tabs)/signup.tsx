@@ -86,13 +86,10 @@ export default function SignUpScreen() {
         const token = await getToken({ template: 'integration_firebase' });
         if (!token) throw new Error('Não foi possível obter o token de autenticação.');
 
-        // Login no Firebase com o token customizado
         const userCredential = await signInWithCustomToken(auth, token);
 
-        // Atualiza o displayName no Firebase Auth
         await updateProfile(userCredential.user, { displayName: name });
 
-        // Cria o usuário no Firestore
         await setDoc(doc(firestore, 'Users', userCredential.user.uid), {
           id: userCredential.user.uid,
           name,
@@ -101,6 +98,7 @@ export default function SignUpScreen() {
           image: imageUrl.trim() || 'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg',
           isAdmin: false,
           createdAt: new Date(),
+          points: 0,
         });
 
         setShowCodePrompt(false);

@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0) { // Only allow left swipe
+        if (gestureState.dx < 0) { 
           position.setValue({ x: gestureState.dx, y: 0 });
         }
       },
