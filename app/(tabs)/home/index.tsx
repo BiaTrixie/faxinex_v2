@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import GroupChoiceModal from '@/components/GroupChoiceModal';
 import JoinGroupModal from '@/components/JoinGroupModal';
+import UserDataSync from '@/components/UserDataSync';
 
 export interface Task {
   id: string,
@@ -172,6 +173,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <UserDataSync />
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.userInfo}>
           <Image

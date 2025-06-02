@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSignIn, useAuth, useOAuth } from '@clerk/clerk-expo';
@@ -42,7 +42,7 @@ export default function LoginScreen() {
   useWarmUpBrowser();
   const router = useRouter();
   const { signIn, setActive } = useSignIn();
-  const { getToken, signOut } = useAuth(); 
+  const { getToken, signOut } = useAuth();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
   const [email, setEmail] = useState('');
@@ -79,29 +79,7 @@ export default function LoginScreen() {
         const token = await getToken({ template: 'integration_firebase' });
         if (!token) throw new Error('Não foi possível obter o token de autenticação.');
 
-        const userCredential = await signInWithCustomToken(auth, token);
-
-        const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-          const name = userCredential.user.displayName || 'Usuário';
-          const email = userCredential.user.email || '';
-          const imageUrl =
-            userCredential.user.photoURL ||
-            'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg';
-
-          await setDoc(userDocRef, {
-            id: userCredential.user.uid,
-            name,
-            email,
-            group_id: '',
-            image: imageUrl.trim(),
-            isAdmin: false,
-            createdAt: new Date(),
-            points: 0,
-          });
-        }
+        await signInWithCustomToken(auth, token);
 
         setIsLoading(false);
         router.replace('/home');
@@ -121,9 +99,9 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      await signOut(); 
+      await signOut();
 
-      const { createdSessionId, signIn, signUp, setActive } = await startOAuthFlow();
+      const { createdSessionId, setActive } = await startOAuthFlow();
 
       if (createdSessionId) {
         if (setActive) {
@@ -133,38 +111,11 @@ export default function LoginScreen() {
         const token = await getToken({ template: 'integration_firebase' });
         if (!token) throw new Error('Não foi possível obter o token de autenticação.');
 
-        const userCredential = await signInWithCustomToken(auth, token);
-
-        const userDocRef = doc(firestore, 'Users', userCredential.user.uid);
-        const userDoc = await getDoc(userDocRef);
-
-        if (!userDoc.exists()) {
-          const name = userCredential.user.displayName || 'Usuário';
-          const email = userCredential.user.email || '';
-          const imageUrl =
-            userCredential.user.photoURL ||
-            'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg';
-
-          await setDoc(userDocRef, {
-            id: userCredential.user.uid,
-            name,
-            email,
-            group_id: '',
-            image: imageUrl.trim(),
-            isAdmin: false,
-            createdAt: new Date(),
-            points: 0,
-          });
-        }
+        await signInWithCustomToken(auth, token);
 
         setIsLoading(false);
         router.replace('/home');
       } else {
-        if (signUp) {
-          console.log('Novo usuário, completando inscrição...');
-        } else if (signIn) {
-          console.log('Usuário existente, completando login...');
-        }
         setIsLoading(false);
         throw new Error('Falha ao completar o processo de autenticação.');
       }
@@ -224,6 +175,7 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
