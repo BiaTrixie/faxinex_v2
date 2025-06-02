@@ -167,10 +167,8 @@ export default function SettingsScreen() {
         throw new Error('Dados da imagem incompletos');
       }
 
-      // Formatar a imagem como base64 com o tipo MIME correto
       const base64Image = `data:${imageAsset.mimeType};base64,${imageAsset.base64}`;
       
-      // Atualizar a imagem de perfil usando o método do Clerk
       await user?.setProfileImage({
         file: base64Image,
       });

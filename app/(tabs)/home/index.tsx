@@ -34,7 +34,6 @@ export default function HomeScreen() {
   const [groupName, setGroupName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
-  // Estados dos modais
   const [showGroupChoiceModal, setShowGroupChoiceModal] = useState(false);
   const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
   const [isJoiningGroup, setIsJoiningGroup] = useState(false);
@@ -78,7 +77,6 @@ export default function HomeScreen() {
       try {
         const response = await fetch('https://backend-faxinex.vercel.app/tasks');
         const allTasks = await response.json();
-        // Filter tasks for current group
         const groupTasks = allTasks.filter((task: Task) => task.idGroup === groupId);
         setTasks(groupTasks);
       } catch (error) {
@@ -91,24 +89,20 @@ export default function HomeScreen() {
     fetchTasks();
   }, []);
 
-  // Função para mostrar o modal de escolha de grupo
   const handleShowGroupOptions = () => {
     setShowGroupChoiceModal(true);
   };
 
-  // Função para criar novo grupo
   const handleCreateGroup = () => {
     setShowGroupChoiceModal(false);
     router.push('/groups/create');
   };
 
-  // Função para mostrar modal de entrar no grupo
   const handleShowJoinGroup = () => {
     setShowGroupChoiceModal(false);
     setShowJoinGroupModal(true);
   };
 
-  // Função para entrar no grupo
   const handleJoinGroup = async (groupIdToJoin: string) => {
     if (!userId) {
       Alert.alert('Erro', 'Usuário não encontrado');
@@ -118,7 +112,6 @@ export default function HomeScreen() {
     setIsJoiningGroup(true);
     
     try {
-      // Verificar se o grupo existe
       const groupDoc = await getDoc(doc(firestore, 'groups', groupIdToJoin));
       
       if (!groupDoc.exists()) {
@@ -126,13 +119,11 @@ export default function HomeScreen() {
         return;
       }
 
-      // Atualizar o usuário com o novo group_id
       const userDocRef = doc(firestore, 'users', userId);
       await updateDoc(userDocRef, {
         group_id: groupIdToJoin
       });
 
-      // Atualizar os estados locais
       setGroupId(groupIdToJoin);
       setGroupName(groupDoc.data().name);
       setShowJoinGroupModal(false);
@@ -146,7 +137,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Função para cancelar operações dos modais
   const handleCancelModals = () => {
     setShowGroupChoiceModal(false);
     setShowJoinGroupModal(false);
@@ -246,7 +236,6 @@ export default function HomeScreen() {
         )}
       </ScrollView>
 
-      {/* Modal de escolha de grupo */}
       <GroupChoiceModal
         visible={showGroupChoiceModal}
         onCreateGroup={handleCreateGroup}
@@ -254,7 +243,6 @@ export default function HomeScreen() {
         onCancel={handleCancelModals}
       />
 
-      {/* Modal para entrar no grupo */}
       <JoinGroupModal
         visible={showJoinGroupModal}
         onJoinGroup={handleJoinGroup}

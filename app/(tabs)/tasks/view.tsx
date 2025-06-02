@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { Calendar, ListFilter } from 'lucide-react-native';
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
-import { Task } from '../home'; // ou '../types/Task' dependendo da sua estrutura
+import { Task } from '../home'; 
 
 type ViewMode = 'daily' | 'weekly' | 'monthly';
 

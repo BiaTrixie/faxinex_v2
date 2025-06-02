@@ -13,7 +13,6 @@ export default function CreateGroupScreen() {
   const [description, setDescription] = useState('');
 
   const handleCreateGroup = () => {
-    // Handle group creation logic here
     router.back();
   };
 

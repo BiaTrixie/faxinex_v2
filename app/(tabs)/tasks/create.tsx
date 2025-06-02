@@ -13,7 +13,6 @@ export default function CreateTaskScreen() {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   const handleCreateTask = () => {
-    // Handle task creation logic here
     router.back();
   };
 
