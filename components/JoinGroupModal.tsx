@@ -9,7 +9,10 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { useTheme } from '@/contexts/ThemeContext';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { firestore } from '@/FirebaseConfig';
 
 const { width } = Dimensions.get('window');
 
@@ -18,6 +21,10 @@ type JoinGroupModalProps = {
   onJoinGroup: (groupId: string) => void;
   onCancel: () => void;
   loading?: boolean;
+  userId: string | null;
+  setShowJoinGroupModal: (show: boolean) => void;
+  setGroupId: (id: string) => void;
+  setGroupName: (name: string) => void;
 };
 
 const JoinGroupModal: React.FC<JoinGroupModalProps> = ({
@@ -25,8 +32,13 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({
   onJoinGroup,
   onCancel,
   loading = false,
+  userId,
+  setShowJoinGroupModal,
+  setGroupId,
+  setGroupName,
 }) => {
-  const [groupId, setGroupId] = useState('');
+  const [groupId, setGroupIdState] = useState('');
+  const [isJoiningGroup, setIsJoiningGroup] = useState(false);
   const { colors } = useTheme();
 
   const handleJoin = () => {
@@ -34,19 +46,60 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({
       Alert.alert('Erro', 'Por favor, digite o ID do grupo');
       return;
     }
-    
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(groupId.trim())) {
-      Alert.alert('Erro', 'ID do grupo inválido. Verifique se o formato está correto.');
+
+    const groupIdRegex = /^[A-Z0-9]{5}$/i;
+    if (!groupIdRegex.test(groupId.trim())) {
+      Alert.alert('Erro', 'ID do grupo inválido. Deve conter 5 letras ou números.');
       return;
     }
 
-    onJoinGroup(groupId.trim());
+    handleJoinGroup(groupId.trim());
   };
 
   const handleCancel = () => {
-    setGroupId('');
+    setGroupIdState('');
     onCancel();
+  };
+
+  const handleJoinGroup = async (groupIdToJoin: string) => {
+    if (!userId) {
+      Alert.alert('Erro', 'Usuário não encontrado');
+      return;
+    }
+
+    setIsJoiningGroup(true);
+
+    try {
+      const groupDocRef = doc(firestore, 'Groups', groupIdToJoin);
+      const groupDoc = await getDoc(groupDocRef);
+
+      if (!groupDoc.exists()) {
+        Alert.alert('Erro', 'Grupo não encontrado. Verifique o ID do grupo.');
+        return;
+      }
+
+      // Atualiza o usuário com o group_id
+      const userDocRef = doc(firestore, 'Users', userId);
+      await updateDoc(userDocRef, {
+        group_id: groupIdToJoin,
+      });
+
+      // Adiciona o usuário aos participants do grupo
+      await updateDoc(groupDocRef, {
+        participants: arrayUnion(userId),
+      });
+
+      setGroupId(groupIdToJoin);
+      setGroupName(groupDoc.data().name);
+      setShowJoinGroupModal(false);
+
+      Alert.alert('Sucesso', 'Você entrou no grupo com sucesso!');
+    } catch (error) {
+      console.error('Erro ao entrar no grupo:', error);
+      Alert.alert('Erro', 'Não foi possível entrar no grupo. Tente novamente.');
+    } finally {
+      setIsJoiningGroup(false);
+    }
   };
 
   return (
@@ -65,7 +118,7 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({
           <View style={styles.inputContainer}>
             <TextInput
               value={groupId}
-              onChangeText={setGroupId}
+              onChangeText={text => setGroupIdState(text.toUpperCase())}
               placeholder="ID do grupo"
               placeholderTextColor={colors.secondaryText}
               keyboardType="default"
@@ -88,10 +141,10 @@ const JoinGroupModal: React.FC<JoinGroupModalProps> = ({
                 styles.button,
                 styles.primaryButton,
                 { backgroundColor: colors.primary },
-                loading && styles.disabledButton,
+                (loading || !userId) && styles.disabledButton,
               ]}
               onPress={handleJoin}
-              disabled={loading}
+              disabled={loading || !userId}
               activeOpacity={0.8}
             >
               <Text style={styles.primaryButtonText}>

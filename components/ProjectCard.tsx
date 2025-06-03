@@ -1,6 +1,8 @@
+// components/ProjectCard.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { Plus } from 'lucide-react-native';
 import { Svg, Circle } from 'react-native-svg';
@@ -13,7 +15,6 @@ interface ProjectCardProps {
   userCompletedTasks?: number;
   userTotalTasks?: number;
   onShowGroupOptions?: () => void;
-  onPress?: () => void;
 }
 
 export default function ProjectCard({
@@ -24,13 +25,22 @@ export default function ProjectCard({
   userCompletedTasks = 0,
   userTotalTasks = 0,
   onShowGroupOptions,
-  onPress,
 }: ProjectCardProps) {
+  const router = useRouter();
   const percentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  if (groupId == '') {
+  const handlePress = () => {
+    if (!groupId || groupId === '') {
+      onShowGroupOptions?.();
+    } else {
+      // Redirecionar para a tela de configurações do grupo
+      router.push(`/groups/settings?id=${groupId}`);
+    }
+  };
+
+  if (!groupId || groupId === '') {
     return (
-      <TouchableOpacity onPress={onShowGroupOptions} activeOpacity={0.8}>
+      <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
         <LinearGradient
           colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
           style={styles.container}
@@ -55,7 +65,7 @@ export default function ProjectCard({
   const progressStroke = circumference - (percentage / 100) * circumference;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.9}>
       <LinearGradient
         colors={[Colors.light.lightBlue1, Colors.light.lightBlue2]}
         style={styles.container}
@@ -107,6 +117,8 @@ export default function ProjectCard({
             </View>
           </View>
         </View>
+
+        <Text style={styles.hint}>Toque para configurar o grupo</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -130,6 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 10,
   },
   metricValue: {
     color: '#FFF',
@@ -158,6 +171,13 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  hint: {
+    color: '#FFF',
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.8,
+    fontStyle: 'italic',
   },
   emptyContent: {
     alignItems: 'center',

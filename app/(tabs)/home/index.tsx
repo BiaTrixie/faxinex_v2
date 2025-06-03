@@ -67,7 +67,6 @@ export default function HomeScreen() {
     }, [])
   );
 
-  // Novo useEffect para buscar o nome do grupo sempre que groupId mudar
   React.useEffect(() => {
     const fetchGroupName = async () => {
       if (groupId && typeof groupId === 'string' && groupId.trim() !== '') {
@@ -96,6 +95,14 @@ export default function HomeScreen() {
   };
 
   const handleShowJoinGroup = () => {
+    // Busca o usuário autenticado do Firebase
+    const authentication = auth;
+    const firebaseUser = authentication.currentUser;
+    if (!firebaseUser) {
+      Alert.alert('Erro', 'Usuário não autenticado. Tente novamente.');
+      return;
+    }
+    setUserId(firebaseUser.uid); // Garante que userId está atualizado
     setShowGroupChoiceModal(false);
     setShowJoinGroupModal(true);
   };
@@ -241,8 +248,11 @@ export default function HomeScreen() {
         onJoinGroup={handleJoinGroup}
         onCancel={handleCancelModals}
         loading={isJoiningGroup}
+        userId={userId}
+        setShowJoinGroupModal={setShowJoinGroupModal}
+        setGroupId={setGroupId}
+        setGroupName={setGroupName}
       />
-
       <BottomBar />
     </SafeAreaView>
   );
