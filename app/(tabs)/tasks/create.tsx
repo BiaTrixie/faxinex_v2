@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import TextInput from '@/components/TextInput';
@@ -8,48 +8,57 @@ import Colors from '@/constants/Colors';
 import { firestore } from '@/FirebaseConfig';
 import { collection, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/clerk-expo';
+import BottomBar from '@/components/BottomBar';
 
 export default function CreateTaskScreen() {
   const router = useRouter();
   const { user } = useUser();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [difficulty, setDifficulty] = useState<'fácil' | 'média' | 'difícil'>('média');
+  const [category, setCategory] = useState('');
+  const [participantInput, setParticipantInput] = useState('');
+  const [participants, setParticipants] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const generateGroupId = () => {
+  // Supondo que o id do grupo do usuário está em user.publicMetadata.group_id
+  const groupId = user?.publicMetadata?.group_id || '';
+
+  const handleAddParticipant = () => {
+    const email = participantInput.trim().toLowerCase();
+    if (email && !participants.includes(email)) {
+      setParticipants([...participants, email]);
+      setParticipantInput('');
+    }
+  };
+
+  const handleRemoveParticipant = (email: string) => {
+    setParticipants(participants.filter((p) => p !== email));
+  };
+
+  const generateTaskId = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let id = '';
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
       id += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return id;
   };
 
-  const getUniqueGroupId = async () => {
-    let unique = false;
-    let groupId = '';
-    while (!unique) {
-      groupId = generateGroupId();
-      const docRef = doc(firestore, 'groups', groupId);
-      const docSnap = await getDoc(docRef);
-      if (!docSnap.exists()) {
-        unique = true;
-      }
-    }
-    return groupId;
-  };
-
   const handleCreateTask = async () => {
-    if (!title.trim() || !description.trim()) return;
+    if (!title.trim() || !description.trim() || !category.trim() || !groupId) return;
     setIsLoading(true);
     try {
-      const groupId = await getUniqueGroupId();
-      await setDoc(doc(firestore, 'groups', groupId), {
-        id: groupId,
-        name: title.trim(),
+      const taskId = generateTaskId();
+      await setDoc(doc(firestore, 'Tasks', taskId), {
+        id: taskId,
+        taskName: title.trim(),
         description: description.trim(),
-        createdBy: user?.id || '',
+        difficulty: difficulty === 'fácil' ? 1 : difficulty === 'média' ? 2 : 3,
+        category: category.trim(),
+        participants,
+        idGroup: groupId,
+        status: 'Pendente',
         createdAt: serverTimestamp(),
       });
       router.back();
@@ -84,10 +93,17 @@ export default function CreateTaskScreen() {
           style={styles.input}
         />
 
+        <TextInput
+          value={category}
+          onChangeText={setCategory}
+          placeholder="Categoria"
+          style={styles.input}
+        />
+
         <View style={styles.difficultyContainer}>
           <Text style={styles.label}>Dificuldade</Text>
           <View style={styles.difficultyButtons}>
-            {(['easy', 'medium', 'hard'] as const).map((level) => (
+            {(['fácil', 'média', 'difícil'] as const).map((level) => (
               <Button
                 key={level}
                 title={level.toUpperCase()}
@@ -99,6 +115,38 @@ export default function CreateTaskScreen() {
           </View>
         </View>
 
+        <View style={styles.participantsSection}>
+          <Text style={styles.label}>Participantes</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TextInput
+              value={participantInput}
+              onChangeText={setParticipantInput}
+              placeholder="Email do participante"
+              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Button
+              title="Adicionar"
+              onPress={handleAddParticipant}
+              style={{ marginLeft: 10 }}
+              disabled={!participantInput.trim()}
+            />
+          </View>
+          {participants.length > 0 && (
+            <View style={styles.participantsList}>
+              {participants.map((email) => (
+                <View key={email} style={styles.participantItem}>
+                  <Text style={styles.participantEmail}>{email}</Text>
+                  <TouchableOpacity onPress={() => handleRemoveParticipant(email)}>
+                    <Text style={{ color: 'red', marginLeft: 8 }}>Remover</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         <Button
           title={isLoading ? "CRIANDO..." : "CRIAR TAREFA"}
           onPress={handleCreateTask}
@@ -107,6 +155,7 @@ export default function CreateTaskScreen() {
           loading={isLoading}
         />
       </ScrollView>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -155,5 +204,25 @@ const styles = StyleSheet.create({
   },
   createButton: {
     marginTop: 20,
+    marginBottom: 80,
+  },
+  participantsSection: {
+    marginBottom: 30,
+  },
+  participantsList: {
+    marginTop: 10,
+    gap: 8,
+  },
+  participantItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  participantEmail: {
+    fontSize: 15,
+    color: Colors.light.primary,
   },
 });

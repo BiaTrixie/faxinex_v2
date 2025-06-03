@@ -537,7 +537,6 @@ export default function GroupSettingsScreen() {
           </View>
         </View>
 
-        {/* Ações Perigosas */}
         {isCurrentUserAdmin && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: '#FF4444' }]}>

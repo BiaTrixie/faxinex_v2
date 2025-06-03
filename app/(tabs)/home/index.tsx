@@ -9,13 +9,22 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Settings } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
+import {
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  Alert,
+} from 'react-native';
 import GroupChoiceModal from '@/components/GroupChoiceModal';
 import JoinGroupModal from '@/components/JoinGroupModal';
 import UserDataSync from '@/components/UserDataSync';
 
 export interface Task {
-  id: string,
+  id: string;
   taskName: string;
   difficulty: number;
   participants: string[];
@@ -29,15 +38,17 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState<string>('');
   const [userPhoto, setUserPhoto] = useState<string | undefined>(undefined);
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [selectedTab, setSelectedTab] = useState<'todas' | 'Pendente' | 'Finalizada'>('todas');
+  const [selectedTab, setSelectedTab] = useState<
+    'todas' | 'Pendente' | 'Finalizada'
+  >('todas');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [groupName, setGroupName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  
+
   const [showGroupChoiceModal, setShowGroupChoiceModal] = useState(false);
   const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
   const [isJoiningGroup, setIsJoiningGroup] = useState(false);
-  
+
   const router = useRouter();
   const { user } = useUser();
 
@@ -48,7 +59,9 @@ export default function HomeScreen() {
         const user = authentication.currentUser;
         if (user) {
           setUserId(user.uid);
-          setUserName(user.displayName || user.email || 'Usuário não encontrado');
+          setUserName(
+            user.displayName || user.email || 'Usuário não encontrado'
+          );
           const db = firestore;
           const userDoc = await getDoc(doc(db, 'Users', user.uid));
           if (userDoc.exists()) {
@@ -56,8 +69,8 @@ export default function HomeScreen() {
             setGroupId(data.group_id ?? null);
             setUserPhoto(
               data.image ||
-              user.photoURL ||
-              'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
+                user.photoURL ||
+                'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
             );
           }
         }
@@ -95,14 +108,13 @@ export default function HomeScreen() {
   };
 
   const handleShowJoinGroup = () => {
-    // Busca o usuário autenticado do Firebase
     const authentication = auth;
     const firebaseUser = authentication.currentUser;
     if (!firebaseUser) {
       Alert.alert('Erro', 'Usuário não autenticado. Tente novamente.');
       return;
     }
-    setUserId(firebaseUser.uid); // Garante que userId está atualizado
+    setUserId(firebaseUser.uid);
     setShowGroupChoiceModal(false);
     setShowJoinGroupModal(true);
   };
@@ -114,10 +126,10 @@ export default function HomeScreen() {
     }
 
     setIsJoiningGroup(true);
-    
+
     try {
       const groupDoc = await getDoc(doc(firestore, 'Groups', groupIdToJoin));
-      
+
       if (!groupDoc.exists()) {
         Alert.alert('Erro', 'Grupo não encontrado. Verifique o ID do grupo.');
         return;
@@ -125,7 +137,7 @@ export default function HomeScreen() {
 
       const userDocRef = doc(firestore, 'users', userId);
       await updateDoc(userDocRef, {
-        group_id: groupIdToJoin
+        group_id: groupIdToJoin,
       });
 
       setGroupId(groupIdToJoin);
@@ -146,7 +158,7 @@ export default function HomeScreen() {
     setShowJoinGroupModal(false);
   };
 
-  const filteredTasks = tasks.filter(task => {
+  const filteredTasks = tasks.filter((task) => {
     if (selectedTab === 'todas') return true;
     if (selectedTab === 'Pendente') return task.status === 'Pendente';
     if (selectedTab === 'Finalizada') return task.status === 'Finalizada';
@@ -155,15 +167,13 @@ export default function HomeScreen() {
 
   const nomeDificuldade = (id: number) => {
     if (id === 1) {
-      return "Fácil"
+      return 'Fácil';
+    } else if (id === 2) {
+      return 'Média';
+    } else {
+      return 'Difícil';
     }
-    else if (id === 2) {
-      return "Média"
-    }
-    else {
-      return "Difícil"
-    }
-  }
+  };
 
   const userTasks = tasks.filter(
     (task) =>
@@ -177,46 +187,89 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <UserDataSync />
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <View style={styles.userInfo}>
           <Image
-            source={{ uri: user?.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' }}
+            source={{
+              uri:
+                user?.imageUrl ||
+                'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+            }}
             style={styles.avatar}
           />
-          <Text style={[styles.userName, { color: colors.text }]}>{user?.firstName || user?.username || 'Usuário'}</Text>
-          <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
+          <Text style={[styles.userName, { color: colors.text }]}>
+            {user?.firstName || user?.username || 'Usuário'}
+          </Text>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push('/settings')}
+          >
             <Settings color={colors.icon} size={24} />
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.content}>
-         <ProjectCard
+        <ProjectCard
           groupId={groupId}
           groupName={groupName}
-          completedTasks={tasks.filter(t => t.status === 'Finalizada').length}
+          completedTasks={tasks.filter((t) => t.status === 'Finalizada').length}
           totalTasks={tasks.length}
           userCompletedTasks={completedUserTasks.length}
           userTotalTasks={userTasks.length}
           onShowGroupOptions={handleShowGroupOptions}
         />
-        {groupId && (
-          <View style={styles.tasksContainer}>
-            <Text style={[styles.tasksTitle, { color: colors.primary }]}>TAREFAS</Text>
-            {tasks.length > 0 ? (
+        <View style={styles.tasksContainer}>
+          <Text style={[styles.tasksTitle, { color: colors.primary }]}>
+            TAREFAS
+          </Text>
+          <View style={styles.menuBar}>
+            <Button
+              title="Todas"
+              variant={selectedTab === 'todas' ? 'primary' : 'outline'}
+              onPress={() => setSelectedTab('todas')}
+              style={styles.menuButton}
+              textStyle={styles.menuButtonText}
+            />
+            <Button
+              title="Pendentes"
+              variant={selectedTab === 'Pendente' ? 'primary' : 'outline'}
+              onPress={() => setSelectedTab('Pendente')}
+              style={styles.menuButton}
+              textStyle={styles.menuButtonText}
+            />
+            <Button
+              title="Finalizadas"
+              variant={selectedTab === 'Finalizada' ? 'primary' : 'outline'}
+              onPress={() => setSelectedTab('Finalizada')}
+              style={styles.menuButton}
+              textStyle={styles.menuButtonText}
+            />
+          </View>
+          {groupId ? (
+            tasks.length > 0 ? (
               tasks.map((task, index) => (
                 <View
                   key={index}
                   style={{
                     marginBottom: 15,
                     padding: 15,
-                    backgroundColor: task.difficulty === 1 ? 'green' : task.difficulty === 2 ? '#eead2d' : 'red',
+                    backgroundColor:
+                      task.difficulty === 1
+                        ? 'green'
+                        : task.difficulty === 2
+                        ? '#eead2d'
+                        : 'red',
                     borderRadius: 8,
                   }}
                 >
-                  <Text style={{ fontWeight: 'bold', color: colors.text }}>{task.taskName}</Text>
+                  <Text style={{ fontWeight: 'bold', color: colors.text }}>
+                    {task.taskName}
+                  </Text>
                   <Text style={{ color: colors.text, marginTop: 5 }}>
                     Status: {task.status}
                   </Text>
@@ -224,16 +277,24 @@ export default function HomeScreen() {
               ))
             ) : (
               <View style={styles.noTasksContainer}>
-                <Text style={[styles.noTasksText, { color: colors.text }]}>Nenhuma tarefa criada ainda</Text>
+                <Text style={[styles.noTasksText, { color: colors.text }]}>
+                  Nenhuma tarefa criada ainda
+                </Text>
                 <Button
                   title="Criar Tarefa"
                   onPress={() => router.push('/tasks/create')}
                   style={styles.addTaskButton}
                 />
               </View>
-            )}
-          </View>
-        )}
+            )
+          ) : (
+            <View style={styles.noTasksContainer}>
+              <Text style={[styles.noTasksText, { color: colors.secondaryText }]}>
+                Você precisa estar em um grupo para criar tarefas
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <GroupChoiceModal
@@ -348,5 +409,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
+  },
+  menuBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 25,
+    gap: 10,
+    alignItems: 'center',
+  },
+  menuButton: {
+    flex: 1,
+    marginHorizontal: 2,
+    minWidth: 0,
+    maxWidth: '33%',
+  },
+  menuButtonText: {
+    flexShrink: 1,
+    flexWrap: 'nowrap',
+    textAlign: 'center',
+    fontSize: 12,
+    includeFontPadding: false,
   },
 });
