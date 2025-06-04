@@ -276,7 +276,6 @@ export default function TaskDetailScreen() {
   };
 
   const formatDate = (dateInput: any): string => {
-    console.log('ERROOOO', dateInput)
     // Verifica se a entrada é nula, indefinida ou vazia
     if (dateInput === null || typeof dateInput === 'undefined' || dateInput === '') {
       return 'Data não disponível';

@@ -277,17 +277,65 @@ export default function TasksViewScreen() {
       .join(', ') + (participantIds.length > 2 ? ` +${participantIds.length - 2}` : '');
   };
 
-  const formatDate = (date: any) => {
-    if (!date) return '';
-    
+  const formatDate = (dateInput: any): string => {
+    // Verifica se a entrada é nula, indefinida ou vazia
+    if (dateInput === null || typeof dateInput === 'undefined' || dateInput === '') {
+      return 'Data não disponível';
+    }
+
+    let dateObj: Date;
+
     try {
-      const dateObj = date.toDate ? date.toDate() : new Date(date);
+      if (dateInput && typeof dateInput.toDate === 'function') {
+        // Caso 1: Objeto com método toDate() (ex: Firebase Timestamp)
+        dateObj = dateInput.toDate();
+      } else if (dateInput instanceof Date) {
+        // Caso 2: Já é um objeto Date
+        dateObj = dateInput;
+      } else if (typeof dateInput === 'number') {
+        // Caso 3: É um número. Assumimos que está em SEGUNDOS, conforme o contexto do problema.
+        // Convertendo para milissegundos para o construtor Date.
+        dateObj = new Date(dateInput * 1000);
+      } else if (typeof dateInput === 'string') {
+        // Caso 4: É uma string. Tentamos interpretá-la.
+        // Verifica se é uma string puramente numérica
+        const numericValue = Number(dateInput);
+        if (!isNaN(numericValue) && dateInput.trim() === String(numericValue)) {
+          // É uma string numérica. Decidir se é segundos ou milissegundos.
+          // Uma heurística comum: timestamps em segundos têm ~10 dígitos, em milissegundos ~13.
+          // Se tiver 10 dígitos, tratamos como segundos.
+          if (String(Math.floor(Math.abs(numericValue))).length === 10) {
+            dateObj = new Date(numericValue * 1000); // Assume segundos
+          } else {
+            dateObj = new Date(numericValue); // Assume milissegundos
+          }
+        } else {
+          // É uma string não numérica (ex: "2023-10-26" ou "May 26, 2025")
+          dateObj = new Date(dateInput);
+        }
+      } else {
+        // Outros tipos: Tenta criar um objeto Date diretamente (pode resultar em data inválida)
+        dateObj = new Date(dateInput);
+      }
+
+      // Verifica se o objeto Date resultante é válido
+      if (isNaN(dateObj.getTime())) {
+        return 'Data inválida';
+      }
+
+      // Formata a data para o padrão pt-BR
       return dateObj.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        // timeZone: 'America/Sao_Paulo' // Adicionar para consistência de fuso horário
       });
-    } catch {
-      return '';
+
+    } catch (error) {
+      // Em caso de qualquer erro durante o processo
+      return 'Data inválida';
     }
   };
 
@@ -428,7 +476,7 @@ export default function TasksViewScreen() {
               <View style={styles.metaItem}>
                 <Calendar color={colors.secondaryText} size={14} />
                 <Text style={[styles.metaText, { color: colors.secondaryText }]}>
-                  {formatDate(task.createdAt)}
+                  {formatDate(task.createdAt._seconds)}
                 </Text>
               </View>
             )}
