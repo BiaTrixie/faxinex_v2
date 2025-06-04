@@ -7,8 +7,8 @@ import { auth, firestore } from '@/FirebaseConfig';
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Settings } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { Plus, Settings } from 'lucide-react-native';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Image,
   SafeAreaView,
@@ -52,8 +52,20 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
 
+  const fetchUserTasks = useCallback(async (uid: string) => {
+    try {
+      const response = await fetch(
+        `https://backend-faxinex.vercel.app/tasks/user/${uid}`
+      );
+      const data = await response.json();
+      setTasks(data);
+    } catch (error) {
+      setTasks([]);
+    }
+  }, []);
+
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       const fetchUserData = async () => {
         const authentication = auth;
         const user = authentication.currentUser;
@@ -73,11 +85,13 @@ export default function HomeScreen() {
                 'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
             );
           }
+          // Sempre buscar as tarefas ao focar na tela
+          await fetchUserTasks(user.uid);
         }
       };
 
       fetchUserData();
-    }, [])
+    }, [fetchUserTasks])
   );
 
   React.useEffect(() => {
@@ -224,9 +238,19 @@ export default function HomeScreen() {
           onShowGroupOptions={handleShowGroupOptions}
         />
         <View style={styles.tasksContainer}>
-          <Text style={[styles.tasksTitle, { color: colors.primary }]}>
-            TAREFAS
-          </Text>
+          <View style={styles.tasksHeaderRow}>
+            <Text style={[styles.tasksTitle, { color: colors.primary }]}>
+              TAREFAS
+            </Text>
+            <TouchableOpacity
+              style={styles.addTaskCircle}
+              onPress={() => router.push('/tasks/create')}
+            >
+              <View style={styles.plusCircle}>
+                <Plus color="#FFF" size={20} />
+              </View>
+            </TouchableOpacity>
+          </View>
           <View style={styles.menuBar}>
             <Button
               title="Todas"
@@ -251,40 +275,43 @@ export default function HomeScreen() {
             />
           </View>
           {groupId ? (
-            tasks.length > 0 ? (
-              tasks.map((task, index) => (
-                <View
-                  key={index}
-                  style={{
-                    marginBottom: 15,
-                    padding: 15,
-                    backgroundColor:
-                      task.difficulty === 1
-                        ? 'green'
-                        : task.difficulty === 2
-                        ? '#eead2d'
-                        : 'red',
-                    borderRadius: 8,
-                  }}
-                >
-                  <Text style={{ fontWeight: 'bold', color: colors.text }}>
-                    {task.taskName}
-                  </Text>
-                  <Text style={{ color: colors.text, marginTop: 5 }}>
-                    Status: {task.status}
-                  </Text>
-                </View>
-              ))
+            userTasks.length > 0 ? (
+              userTasks
+                .filter((task) =>
+                  selectedTab === 'todas'
+                    ? true
+                    : selectedTab === 'Pendente'
+                    ? task.status === 'Pendente'
+                    : task.status === 'Finalizada'
+                )
+                .map((task, index) => (
+                  <View
+                    key={index}
+                    style={{
+                      marginBottom: 15,
+                      padding: 15,
+                      backgroundColor:
+                        task.difficulty === 1
+                          ? 'green'
+                          : task.difficulty === 2
+                          ? '#eead2d'
+                          : 'red',
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text style={{ fontWeight: 'bold', color: colors.text }}>
+                      {task.taskName}
+                    </Text>
+                    <Text style={{ color: colors.text, marginTop: 5 }}>
+                      Status: {task.status}
+                    </Text>
+                  </View>
+                ))
             ) : (
               <View style={styles.noTasksContainer}>
                 <Text style={[styles.noTasksText, { color: colors.text }]}>
                   Nenhuma tarefa criada ainda
                 </Text>
-                <Button
-                  title="Criar Tarefa"
-                  onPress={() => router.push('/tasks/create')}
-                  style={styles.addTaskButton}
-                />
               </View>
             )
           ) : (
@@ -429,5 +456,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 12,
     includeFontPadding: false,
+  },
+  tasksHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    justifyContent: 'space-between',
+  },
+  addTaskCircle: {
+    marginLeft: 10,
+  },
+  plusCircle: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
   },
 });
