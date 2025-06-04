@@ -137,7 +137,7 @@ export default function TasksViewScreen() {
       const membersMap: { [key: string]: GroupMember } = {};
 
       for (const participantId of participants) {
-        if (participantId === user?.id) {
+        if (user && participantId === user?.id) {
           membersMap[participantId] = {
             id: user.id,
             name: user.firstName || user.username || 'Você',

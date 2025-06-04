@@ -1,23 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-} from 'react-native';
+import { useUser } from '@clerk/clerk-expo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { doc, getDoc } from 'firebase/firestore';
-import { useUser } from '@clerk/clerk-expo';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
+import Colors from '@/constants/Colors';
 import { useTheme } from '@/contexts/ThemeContext';
 import { firestore } from '@/FirebaseConfig';
+
+import { AlertCircle } from 'lucide-react-native';
 
 const PERIODS = ['GRUPO', 'GLOBAL'];
 
@@ -41,7 +43,7 @@ export default function RankingScreen() {
   // Buscar o group_id do usuário logado
   const fetchUserGroupId = async () => {
     if (!user?.id) return null;
-    
+
     try {
       const userDoc = await getDoc(doc(firestore, 'Users', user.id));
       if (userDoc.exists()) {
@@ -58,26 +60,26 @@ export default function RankingScreen() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
+
       // Primeiro, obter o group_id do usuário atual
       const groupId = await fetchUserGroupId();
-      
+
       const res = await fetch('https://backend-faxinex.vercel.app/users');
       const data = await res.json();
-      
+
       let filteredUsers = data;
-      
+
       if (selectedPeriod === 'GRUPO' && groupId) {
         // Filtrar apenas usuários do mesmo grupo
         filteredUsers = data.filter((user: User) => user.group_id === groupId);
       }
       // Para GLOBAL, mostra todos os usuários (não filtra)
-      
+
       // Ordena por pontos decrescente
       const sortedUsers = filteredUsers.sort(
         (a: User, b: User) => (b.points || 0) - (a.points || 0)
       );
-      
+
       setUsers(sortedUsers);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
@@ -186,7 +188,11 @@ export default function RankingScreen() {
         </View>
       ) : hasNoGroupAccess ? (
         <View style={styles.noGroupContainer}>
-          <Text style={[styles.noGroupText, { color: colors.primary }]}>
+          <AlertCircle color={colors.primary} size={48} />
+          <Text style={[styles.noGroupTitle, { color: colors.primary }]}>
+            Você precisa estar em um grupo
+          </Text>
+          <Text style={[styles.noGroupText, { color: colors.secondaryText }]}>
             Você precisa estar em um grupo para ver o ranking do grupo
           </Text>
         </View>
@@ -213,7 +219,7 @@ export default function RankingScreen() {
                   <Text style={styles.topThreePoints}>{users[1].points || 0} pts</Text>
                 </View>
               )}
-              
+
               {/* Primeira posição */}
               {users[0] && (
                 <View style={styles.firstPlace}>
@@ -228,7 +234,7 @@ export default function RankingScreen() {
                   <Text style={styles.topThreePoints}>{users[0].points || 0} pts</Text>
                 </View>
               )}
-              
+
               {/* Terceira posição */}
               {users[2] && (
                 <View style={styles.thirdPlace}>
@@ -261,7 +267,7 @@ export default function RankingScreen() {
             ) : (
               <View style={styles.emptyContainer}>
                 <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-                  {selectedPeriod === 'GRUPO' 
+                  {selectedPeriod === 'GRUPO'
                     ? 'Nenhum membro do grupo encontrado'
                     : 'Nenhum usuário encontrado'
                   }
@@ -280,6 +286,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
+  },
+  noGroupTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,

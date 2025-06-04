@@ -19,11 +19,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import BackButton from '@/components/BackButton';
 import BottomBar from '@/components/BottomBar';
 import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useRouter } from 'expo-router';
+import { PrivacyModal } from '@/components/PrivacyModal';
 
 export default function SettingsScreen() {
   const { theme, colors, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [isUpdatingImage, setIsUpdatingImage] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const { signOut } = useAuth();
   const { user } = useUser();
 
@@ -46,7 +49,7 @@ export default function SettingsScreen() {
   }) => (
     <TouchableOpacity style={styles.settingItem} onPress={onPress}>
       {icon}
-      <Text style={styles.settingTitle}>{title}</Text>
+      <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
       <View style={styles.settingRight}>
         {showToggle ? (
           <Switch
@@ -66,7 +69,7 @@ export default function SettingsScreen() {
   const handleImagePicker = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (permissionResult.granted === false) {
         Alert.alert(
           'Permissão Necessária',
@@ -108,11 +111,11 @@ export default function SettingsScreen() {
   const pickImageFromGallery = async () => {
     try {
       setIsUpdatingImage(true);
-      
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1], 
+        aspect: [1, 1],
         quality: 0.8,
         base64: true,
       });
@@ -131,7 +134,7 @@ export default function SettingsScreen() {
   const pickImageFromCamera = async () => {
     try {
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      
+
       if (permissionResult.granted === false) {
         Alert.alert(
           'Permissão Necessária',
@@ -142,10 +145,10 @@ export default function SettingsScreen() {
       }
 
       setIsUpdatingImage(true);
-      
+
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
-        aspect: [1, 1], 
+        aspect: [1, 1],
         quality: 0.8,
         base64: true,
       });
@@ -168,7 +171,7 @@ export default function SettingsScreen() {
       }
 
       const base64Image = `data:${imageAsset.mimeType};base64,${imageAsset.base64}`;
-      
+
       await user?.setProfileImage({
         file: base64Image,
       });
@@ -176,13 +179,13 @@ export default function SettingsScreen() {
       Alert.alert('Sucesso', 'Imagem de perfil atualizada com sucesso!');
     } catch (error: any) {
       console.error('Erro ao atualizar imagem de perfil:', error);
-      
+
       let errorMessage = 'Não foi possível atualizar a imagem de perfil.';
-      
+
       if (error?.errors && error.errors.length > 0) {
         errorMessage = error.errors[0].message || errorMessage;
       }
-      
+
       Alert.alert('Erro', errorMessage);
     }
   };
@@ -190,7 +193,7 @@ export default function SettingsScreen() {
   const removeProfileImage = async () => {
     try {
       setIsUpdatingImage(true);
-      
+
       await user?.setProfileImage({
         file: null,
       });
@@ -198,18 +201,22 @@ export default function SettingsScreen() {
       Alert.alert('Sucesso', 'Imagem de perfil removida com sucesso!');
     } catch (error: any) {
       console.error('Erro ao remover imagem de perfil:', error);
-      
+
       let errorMessage = 'Não foi possível remover a imagem de perfil.';
-      
+
       if (error?.errors && error.errors.length > 0) {
         errorMessage = error.errors[0].message || errorMessage;
       }
-      
+
       Alert.alert('Erro', errorMessage);
     } finally {
       setIsUpdatingImage(false);
     }
   };
+
+  const handleShowPrivacyModal = () => {
+    setShowPrivacyModal(!showPrivacyModal);
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -222,14 +229,14 @@ export default function SettingsScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.profileSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileImageContainer}
             onPress={handleImagePicker}
             disabled={isUpdatingImage}
           >
             <Image
-              source={{ 
-                uri: user?.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg' 
+              source={{
+                uri: user?.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg'
               }}
               style={[styles.profileImage, isUpdatingImage && styles.profileImageLoading]}
             />
@@ -274,28 +281,33 @@ export default function SettingsScreen() {
             icon={<Globe color={Colors.light.primary} size={24} />}
             title="Idioma"
             value="Português"
-            onPress={() => {}}
+            onPress={() => { }}
           />
           <SettingItem
             icon={<Lock color={Colors.light.primary} size={24} />}
             title="Privacidade"
-            onPress={() => {}} 
+            onPress={() => handleShowPrivacyModal()}
             value={undefined}
           />
           <SettingItem
             icon={<Database color={Colors.light.primary} size={24} />}
             title="Dados do Aplicativo"
-            onPress={() => {}} 
+            onPress={() => { }}
             value={undefined}
           />
         </View>
+
+        <PrivacyModal
+          visible={showPrivacyModal}
+          onClose={() => setShowPrivacyModal(false)}
+        />
 
         <View style={styles.section}>
           <SettingItem
             icon={<LogOut color={Colors.light.primary} size={24} />}
             title="Sair"
             onPress={signOut}
-            showChevron={false} 
+            showChevron={false}
             value={undefined}
           />
         </View>
@@ -332,7 +344,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(211, 211, 211, 0.1)',
   },
   profileImageContainer: {
     position: 'relative',
@@ -379,7 +391,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(211, 211, 211, 0.1)',
   },
   sectionTitle: {
     fontSize: 14,
@@ -396,7 +408,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     marginLeft: 15,
-    color: '#333',
   },
   settingRight: {
     flexDirection: 'row',

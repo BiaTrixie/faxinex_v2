@@ -1,15 +1,20 @@
 import BottomBar from '@/components/BottomBar';
 import Button from '@/components/Button';
+import GroupChoiceModal from '@/components/GroupChoiceModal';
+import JoinGroupModal from '@/components/JoinGroupModal';
 import ProjectCard from '@/components/ProjectCard';
+import UserDataSync from '@/components/UserDataSync';
 import Colors from '@/constants/Colors';
 import { useTheme } from '@/contexts/ThemeContext';
-import { auth, firestore } from '@/FirebaseConfig';
+import { firestore } from '@/FirebaseConfig';
 import { useUser } from '@clerk/clerk-expo';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Plus, Settings, Star } from 'lucide-react-native';
-import React, { useEffect, useState, useCallback } from 'react';
+import { AlertCircle, Settings, Star } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -17,12 +22,7 @@ import {
   Text,
   TouchableOpacity,
   View,
-  Alert,
-  ActivityIndicator,
 } from 'react-native';
-import GroupChoiceModal from '@/components/GroupChoiceModal';
-import JoinGroupModal from '@/components/JoinGroupModal';
-import UserDataSync from '@/components/UserDataSync';
 
 export interface Task {
   id: string;
@@ -107,12 +107,12 @@ export default function HomeScreen() {
 
     try {
       setIsLoadingUserData(true);
-      
+
       // Definir dados básicos do usuário
       setUserId(user.id);
       setUserName(user.firstName || user.username || 'Usuário');
       setUserPhoto(
-        user.imageUrl || 
+        user.imageUrl ||
         'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
       );
 
@@ -122,7 +122,7 @@ export default function HomeScreen() {
         const data = userDoc.data();
         const userGroupId = data.group_id ?? null;
         setGroupId(userGroupId);
-        
+
         // Atualizar foto se disponível no Firestore
         if (data.image) {
           setUserPhoto(data.image);
@@ -159,7 +159,7 @@ export default function HomeScreen() {
 
       // Buscar tarefas do usuário
       await fetchUserTasks(user.id);
-      
+
     } catch (error) {
       console.error('Erro ao buscar dados do usuário:', error);
       Alert.alert('Erro', 'Não foi possível carregar os dados do usuário');
@@ -201,7 +201,7 @@ export default function HomeScreen() {
   const handleTaskPress = (task: Task) => {
     router.push({
       pathname: '/tasks/detail',
-      params: { 
+      params: {
         taskId: task.id,
         taskData: JSON.stringify(task)
       }
@@ -317,7 +317,7 @@ export default function HomeScreen() {
             }}
             style={styles.avatar}
           />
-          <Text style={[styles.userName, { color: colors.text }]}>
+          <Text style={[styles.userName, { color: colors.profileText }]}>
             {userName || user?.firstName || user?.username || 'Usuário'}
           </Text>
           <TouchableOpacity
@@ -348,7 +348,7 @@ export default function HomeScreen() {
             onShowGroupOptions={handleShowGroupOptions}
           />
         )}
-        
+
         <View style={styles.tasksContainer}>
           <View style={styles.tasksHeaderRow}>
             <Text style={[styles.tasksTitle, { color: colors.primary }]}>
@@ -358,12 +358,9 @@ export default function HomeScreen() {
               style={styles.addTaskCircle}
               onPress={() => router.push('/tasks/create')}
             >
-              <View style={styles.plusCircle}>
-                <Plus color="#FFF" size={20} />
-              </View>
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.menuBar}>
             <Button
               title="Todas"
@@ -402,13 +399,13 @@ export default function HomeScreen() {
                   selectedTab === 'todas'
                     ? true
                     : selectedTab === 'Pendente'
-                    ? task.status === 'Pendente'
-                    : task.status === 'Finalizada'
+                      ? task.status === 'Pendente'
+                      : task.status === 'Finalizada'
                 )
                 .map((task, index) => {
                   const difficultyInfo = getDifficultyInfo(task.difficulty);
                   const difficultyColor = getDifficultyColor(task.difficulty);
-                  
+
                   return (
                     <TouchableOpacity
                       key={index}
@@ -423,9 +420,9 @@ export default function HomeScreen() {
                         <Text style={[styles.taskTitle, { color: colors.primary }]}>
                           {task.taskName}
                         </Text>
-                        <View 
+                        <View
                           style={[
-                            styles.difficultyBadge, 
+                            styles.difficultyBadge,
                             { backgroundColor: difficultyColor }
                           ]}
                         >
@@ -435,7 +432,7 @@ export default function HomeScreen() {
                           </Text>
                         </View>
                       </View>
-                      
+
                       <View style={styles.taskInfo}>
                         <Text style={[styles.taskStatus, { color: colors.secondaryText }]}>
                           Status: {task.status}
@@ -444,7 +441,7 @@ export default function HomeScreen() {
                           {difficultyInfo.points} pts
                         </Text>
                       </View>
-                      
+
                       {task.category && (
                         <Text style={[styles.taskCategory, { color: colors.secondaryText }]}>
                           Categoria: {task.category}
@@ -462,6 +459,10 @@ export default function HomeScreen() {
             )
           ) : (
             <View style={styles.noTasksContainer}>
+              <AlertCircle color={colors.primary} size={48} />
+              <Text style={[styles.noGroupTitle, { color: colors.primary }]}>
+                Você precisa estar em um grupo
+              </Text>
               <Text style={[styles.noTasksText, { color: colors.secondaryText }]}>
                 Você precisa estar em um grupo para criar tarefas
               </Text>
@@ -496,6 +497,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
+  },
+  noGroupTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 10,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
