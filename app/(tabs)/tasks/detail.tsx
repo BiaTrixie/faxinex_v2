@@ -1,5 +1,6 @@
-import { doc, updateDoc, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import Toast from 'react-native-toast-message';
+import { Modal } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
@@ -9,10 +10,26 @@ import { Task } from '../home';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import { useEffect, useState } from 'react';
-import { Alert, SafeAreaView, TouchableOpacity, View, Text, ActivityIndicator, ScrollView, Image, StyleSheet} from 'react-native';
+import {
+  Alert,
+  SafeAreaView,
+  TouchableOpacity,
+  View,
+  Text,
+  ActivityIndicator,
+  ScrollView,
+  Image,
+  StyleSheet,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, Calendar, CheckCircle2, Star, Trophy, Users } from 'lucide-react-native';
-import TaskService from '@/services/TaskService';
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Star,
+  Trophy,
+  Users,
+} from 'lucide-react-native';
 
 interface Difficulty {
   id: number;
@@ -38,6 +55,7 @@ export default function TaskDetailScreen() {
   const [participants, setParticipants] = useState<GroupMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCompletingTask, setIsCompletingTask] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   useEffect(() => {
     loadTaskData();
@@ -47,15 +65,12 @@ export default function TaskDetailScreen() {
     try {
       setIsLoading(true);
 
-      // Parse task data from params
       if (taskData) {
         const parsedTask = JSON.parse(taskData as string) as Task;
+        console.log('Tarefa carregada:', parsedTask);
         setTask(parsedTask);
 
-        // Fetch difficulty info
         await fetchDifficultyInfo(parsedTask.difficulty);
-
-        // Fetch participants info
         await fetchParticipantsInfo(parsedTask.participants);
       }
     } catch (error) {
@@ -69,27 +84,39 @@ export default function TaskDetailScreen() {
 
   const fetchDifficultyInfo = async (difficultyId: number) => {
     try {
-      const response = await fetch('https://backend-faxinex.vercel.app/difficulties');
+      const response = await fetch(
+        'https://backend-faxinex.vercel.app/difficulties'
+      );
       const difficulties = await response.json();
-      const difficultyInfo = difficulties.find((d: Difficulty) => d.id === difficultyId);
-      
+      const difficultyInfo = difficulties.find(
+        (d: Difficulty) => d.id === difficultyId
+      );
+
       if (difficultyInfo) {
         setDifficulty(difficultyInfo);
       } else {
-        // Fallback
         setDifficulty({
           id: difficultyId,
-          name: difficultyId === 1 ? 'Fácil' : difficultyId === 2 ? 'Média' : 'Difícil',
-          points: difficultyId === 1 ? 3 : difficultyId === 2 ? 5 : 8
+          name:
+            difficultyId === 1
+              ? 'Fácil'
+              : difficultyId === 2
+              ? 'Média'
+              : 'Difícil',
+          points: difficultyId === 1 ? 3 : difficultyId === 2 ? 5 : 8,
         });
       }
     } catch (error) {
       console.error('Erro ao buscar dificuldade:', error);
-      // Fallback
       setDifficulty({
         id: difficultyId,
-        name: difficultyId === 1 ? 'Fácil' : difficultyId === 2 ? 'Média' : 'Difícil',
-        points: difficultyId === 1 ? 3 : difficultyId === 2 ? 5 : 8
+        name:
+          difficultyId === 1
+            ? 'Fácil'
+            : difficultyId === 2
+            ? 'Média'
+            : 'Difícil',
+        points: difficultyId === 1 ? 3 : difficultyId === 2 ? 5 : 8,
       });
     }
   };
@@ -102,7 +129,9 @@ export default function TaskDetailScreen() {
             id: user.id,
             name: user.firstName || user.username || 'Você',
             email: user.primaryEmailAddress?.emailAddress || '',
-            image: user.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+            image:
+              user.imageUrl ||
+              'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
           };
         }
 
@@ -113,66 +142,113 @@ export default function TaskDetailScreen() {
             id: participantId,
             name: userData.name || 'Usuário',
             email: userData.email || '',
-            image: userData.image || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
+            image:
+              userData.image ||
+              'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
           };
         }
         return null;
       });
 
       const participantsData = await Promise.all(participantsPromises);
-      setParticipants(participantsData.filter((p): p is GroupMember => p !== null));
+      setParticipants(
+        participantsData.filter((p): p is GroupMember => p !== null)
+      );
     } catch (error) {
       console.error('Erro ao buscar participantes:', error);
     }
   };
 
-  const handleCompleteTask = async () => {
-    if (!task || !user?.id || !difficulty) return;
+  const handleCompleteTask = () => {
+    if (!task || !user?.id || !difficulty) {
+      console.log('Dados faltando:', {
+        task: !!task,
+        user: !!user?.id,
+        difficulty: !!difficulty,
+      });
+      return;
+    }
+    setShowConfirmModal(true);
+  };
 
-    Alert.alert(
-      'Completar Tarefa',
-      `Tem certeza que deseja marcar esta tarefa como concluída? Você ganhará ${difficulty.points} pontos!`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Completar',
-          style: 'default',
-          onPress: () => completeTask(),
-        },
-      ]
-    );
+  const handleConfirmComplete = () => {
+    setShowConfirmModal(false);
+    completeTask();
+  };
+
+  const handleCancelComplete = () => {
+    setShowConfirmModal(false);
   };
 
   const completeTask = async () => {
-    if (!task || !user?.id) return;
+    if (!task || !user?.id || !difficulty) {
+      console.log('Dados insuficientes para completar tarefa');
+      return;
+    }
 
+    console.log('Executando conclusão da tarefa...');
     setIsCompletingTask(true);
 
     try {
-      // Usar TaskService para completar a tarefa
-      const result = await TaskService.completeTask(task.id, user.id, task.difficulty);
+      console.log('Atualizando status da tarefa...');
+      await updateDoc(doc(firestore, 'Tasks', task.id), {
+        status: 'Finalizada',
+        completedAt: new Date(),
+        completedBy: user.id,
+      });
 
-      if (result.success) {
-        setTask(prev => prev ? { ...prev, status: 'Finalizada' } : null);
+      console.log('Adicionando pontos para os participantes...');
 
-        Toast.show({
-          type: 'success',
-          text1: 'Parabéns!',
-          text2: result.message,
-          position: 'top',
-        });
+      const pointsToAdd = difficulty.points;
+      console.log(
+        `Adicionando ${pointsToAdd} pontos para ${task.participants.length} participantes`
+      );
 
-        setTimeout(() => {
-          router.replace('/home');
-        }, 1200);
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Erro',
-          text2: result.message,
-          position: 'top',
-        });
-      }
+      const updatePromises = task.participants.map(
+        async (participantId: string) => {
+          try {
+            const userDocRef = doc(firestore, 'Users', participantId);
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+              const currentPoints = userDoc.data().points || 0;
+              const newPoints = currentPoints + pointsToAdd;
+
+              await updateDoc(userDocRef, {
+                points: newPoints,
+                lastPointsUpdate: new Date(),
+              });
+
+              console.log(
+                `Pontos atualizados para usuário ${participantId}: ${currentPoints} → ${newPoints}`
+              );
+            }
+          } catch (error) {
+            console.error(
+              `Erro ao atualizar pontos do usuário ${participantId}:`,
+              error
+            );
+          }
+        }
+      );
+
+      await Promise.all(updatePromises);
+
+      // 3. Atualizar o estado local
+      setTask((prev) => (prev ? { ...prev, status: 'Finalizada' } : null));
+
+      // 4. Mostrar sucesso
+      Toast.show({
+        type: 'success',
+        text1: 'Parabéns!',
+        text2: `Tarefa concluída! Você ganhou ${pointsToAdd} pontos!`,
+        position: 'top',
+      });
+
+      // 5. Voltar para home após 2 segundos
+      setTimeout(() => {
+        router.replace('/home');
+      }, 2000);
     } catch (error) {
       console.error('Erro ao completar tarefa:', error);
       Toast.show({
@@ -188,16 +264,20 @@ export default function TaskDetailScreen() {
 
   const getDifficultyColor = (difficultyId: number) => {
     switch (difficultyId) {
-      case 1: return '#4CAF50'; // Verde para fácil
-      case 2: return '#FF9800'; // Laranja para média
-      case 3: return '#F44336'; // Vermelho para difícil
-      default: return '#9E9E9E'; // Cinza para desconhecida
+      case 1:
+        return '#4CAF50';
+      case 2:
+        return '#FF9800';
+      case 3:
+        return '#F44336';
+      default:
+        return '#9E9E9E';
     }
   };
 
   const formatDate = (date: any) => {
     if (!date) return 'Data não disponível';
-    
+
     try {
       let dateObj;
       if (date.toDate) {
@@ -207,7 +287,7 @@ export default function TaskDetailScreen() {
       } else {
         dateObj = new Date(date);
       }
-      
+
       return dateObj.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
@@ -222,12 +302,14 @@ export default function TaskDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
         <LinearGradient
           colors={[colors.primary, colors.lightBlue1]}
           style={styles.header}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -235,7 +317,7 @@ export default function TaskDetailScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>DETALHES DA TAREFA</Text>
         </LinearGradient>
-        
+
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.primary }]}>
@@ -249,12 +331,14 @@ export default function TaskDetailScreen() {
 
   if (!task || !difficulty) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
         <LinearGradient
           colors={[colors.primary, colors.lightBlue1]}
           style={styles.header}
         >
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
@@ -262,7 +346,7 @@ export default function TaskDetailScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>DETALHES DA TAREFA</Text>
         </LinearGradient>
-        
+
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.primary }]}>
             Tarefa não encontrada
@@ -275,15 +359,18 @@ export default function TaskDetailScreen() {
 
   const difficultyColor = getDifficultyColor(task.difficulty);
   const isTaskCompleted = task.status === 'Finalizada';
-  const canCompleteTask = !isTaskCompleted && task.participants.includes(user?.id || '');
+  const canCompleteTask =
+    !isTaskCompleted && task.participants.includes(user?.id || '');
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       <LinearGradient
         colors={[colors.primary, colors.lightBlue1]}
         style={styles.header}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -294,24 +381,32 @@ export default function TaskDetailScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.taskCard}>
-          {/* Header da tarefa */}
           <View style={styles.taskHeader}>
             <Text style={[styles.taskTitle, { color: colors.primary }]}>
               {task.taskName}
             </Text>
-            <View style={[styles.statusBadge, { 
-              backgroundColor: isTaskCompleted ? '#4CAF50' : '#FF9800' 
-            }]}>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: isTaskCompleted ? '#4CAF50' : '#FF9800',
+                },
+              ]}
+            >
               <Text style={styles.statusText}>{task.status}</Text>
             </View>
           </View>
 
-          {/* Informações básicas */}
           <View style={styles.infoSection}>
             <View style={styles.infoRow}>
               <Star color={difficultyColor} size={20} />
               <Text style={styles.infoLabel}>Dificuldade:</Text>
-              <View style={[styles.difficultyBadge, { backgroundColor: difficultyColor }]}>
+              <View
+                style={[
+                  styles.difficultyBadge,
+                  { backgroundColor: difficultyColor },
+                ]}
+              >
                 <Text style={styles.difficultyText}>{difficulty.name}</Text>
               </View>
             </View>
@@ -328,7 +423,8 @@ export default function TaskDetailScreen() {
               <Users color={Colors.light.primary} size={20} />
               <Text style={styles.infoLabel}>Participantes:</Text>
               <Text style={styles.infoValue}>
-                {participants.length} {participants.length === 1 ? 'pessoa' : 'pessoas'}
+                {participants.length}{' '}
+                {participants.length === 1 ? 'pessoa' : 'pessoas'}
               </Text>
             </View>
 
@@ -343,31 +439,32 @@ export default function TaskDetailScreen() {
             )}
           </View>
 
-          {/* Descrição */}
           {task.description && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.primary }]}>
                 Descrição
               </Text>
-              <Text style={[styles.description, { color: colors.secondaryText }]}>
+              <Text
+                style={[styles.description, { color: colors.secondaryText }]}
+              >
                 {task.description}
               </Text>
             </View>
           )}
 
-          {/* Categoria */}
           {task.category && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.primary }]}>
                 Categoria
               </Text>
-              <Text style={[styles.categoryText, { color: colors.secondaryText }]}>
+              <Text
+                style={[styles.categoryText, { color: colors.secondaryText }]}
+              >
                 {task.category}
               </Text>
             </View>
           )}
 
-          {/* Participantes */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.primary }]}>
               Participantes ({participants.length})
@@ -375,16 +472,26 @@ export default function TaskDetailScreen() {
             <View style={styles.participantsList}>
               {participants.map((participant) => (
                 <View key={participant.id} style={styles.participantItem}>
-                  <Image 
-                    source={{ uri: participant.image }} 
-                    style={styles.participantAvatar} 
+                  <Image
+                    source={{ uri: participant.image }}
+                    style={styles.participantAvatar}
                   />
                   <View style={styles.participantInfo}>
-                    <Text style={[styles.participantName, { color: colors.primary }]}>
+                    <Text
+                      style={[
+                        styles.participantName,
+                        { color: colors.primary },
+                      ]}
+                    >
                       {participant.name}
                       {participant.id === user?.id && ' (Você)'}
                     </Text>
-                    <Text style={[styles.participantEmail, { color: colors.secondaryText }]}>
+                    <Text
+                      style={[
+                        styles.participantEmail,
+                        { color: colors.secondaryText },
+                      ]}
+                    >
                       {participant.email}
                     </Text>
                   </View>
@@ -393,10 +500,12 @@ export default function TaskDetailScreen() {
             </View>
           </View>
 
-          {/* Botão de completar */}
           {canCompleteTask && (
-            <TouchableOpacity 
-              style={[styles.completeButton, { backgroundColor: difficultyColor }]}
+            <TouchableOpacity
+              style={[
+                styles.completeButton,
+                { backgroundColor: difficultyColor },
+              ]}
               onPress={handleCompleteTask}
               disabled={isCompletingTask}
             >
@@ -423,6 +532,54 @@ export default function TaskDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal de confirmação */}
+      <Modal
+        visible={showConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelComplete}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContainer,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.primary }]}>
+              Completar Tarefa
+            </Text>
+            <Text
+              style={[styles.modalMessage, { color: colors.secondaryText }]}
+            >
+              Tem certeza que deseja marcar esta tarefa como concluída?{'\n'}
+              Todos os participantes ganharão {difficulty?.points} pontos!
+            </Text>
+            <View style={styles.modalButtonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#E0E0E0' }]}
+                onPress={handleCancelComplete}
+              >
+                <Text
+                  style={[styles.modalButtonText, { color: colors.primary }]}
+                >
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleConfirmComplete}
+                disabled={isCompletingTask}
+              >
+                <Text style={[styles.modalButtonText, { color: '#FFF' }]}>
+                  Completar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <BottomBar />
     </SafeAreaView>
@@ -608,6 +765,45 @@ const styles = StyleSheet.create({
   },
   completedText: {
     color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '80%',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  modalButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
   },
