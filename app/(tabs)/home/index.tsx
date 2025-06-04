@@ -10,7 +10,7 @@ import { firestore } from '@/FirebaseConfig';
 import { useUser } from '@clerk/clerk-expo';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { AlertCircle, Settings, Star } from 'lucide-react-native';
+import { Plus, AlertCircle, Settings, Star } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -358,6 +358,14 @@ export default function HomeScreen() {
               style={styles.addTaskCircle}
               onPress={() => router.push('/tasks/create')}
             >
+              {
+                groupId ?
+                  <View style={styles.plusCircle}>
+                    <Plus color="#FFF" size={20} />
+                  </View>
+                  :
+                  <></>
+              }
             </TouchableOpacity>
           </View>
 
