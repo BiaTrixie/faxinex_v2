@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ import { doc, setDoc } from 'firebase/firestore';
 export default function SignUpScreen() {
   const router = useRouter();
   const { signUp, setActive } = useSignUp();
-  const { getToken, signOut } = useAuth(); 
+  const { getToken, signOut, isSignedIn } = useAuth(); 
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -34,6 +34,14 @@ export default function SignUpScreen() {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showCodePrompt, setShowCodePrompt] = useState(false);
+
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (isSignedIn) {
+      console.log('Usuário já está logado, redirecionando para /home');
+      router.replace('/home');
+    }
+  }, [isSignedIn]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -46,18 +54,39 @@ export default function SignUpScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const createUserInFirestore = async (userId: string, userData: any) => {
+    try {
+      await setDoc(doc(firestore, 'Users', userId), {
+        id: userId,
+        name: userData.name,
+        email: userData.email,
+        group_id: '',
+        image: userData.image || 'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg',
+        isAdmin: false,
+        createdAt: new Date(),
+        points: 0,
+      });
+      console.log('Documento do usuário criado no Firestore');
+    } catch (error) {
+      console.error('Erro ao criar documento do usuário:', error);
+      throw error;
+    }
+  };
+
   const handleSignUp = async () => {
     if (!validate()) return;
     setIsLoading(true);
 
     try {
+      // Limpar sessão anterior
       await signOut();
 
-     await signUp?.create({
-      emailAddress: email,
-      password,
-      username: name, 
-    });
+      console.log('Tentando criar conta...');
+      await signUp?.create({
+        emailAddress: email,
+        password,
+        username: name, 
+      });
 
       await signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
 
@@ -65,6 +94,7 @@ export default function SignUpScreen() {
       setIsLoading(false);
     } catch (err: any) {
       setIsLoading(false);
+      console.error('Erro no signup:', err);
       Toast.show({
         type: 'error',
         text1: 'Erro',
@@ -76,6 +106,7 @@ export default function SignUpScreen() {
   const handleCodeSubmit = async (code: string) => {
     setIsLoading(true);
     try {
+      console.log('Verificando código...');
       const result = await signUp?.attemptEmailAddressVerification({ code });
 
       if (result?.status === 'complete') {
@@ -90,30 +121,38 @@ export default function SignUpScreen() {
 
         await updateProfile(userCredential.user, { displayName: name });
 
-        await setDoc(doc(firestore, 'Users', userCredential.user.uid), {
-          id: userCredential.user.uid,
+        // Criar documento do usuário no Firestore
+        await createUserInFirestore(userCredential.user.uid, {
           name,
           email,
-          group_id: '',
           image: imageUrl.trim() || 'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg',
-          isAdmin: false,
-          createdAt: new Date(),
-          points: 0,
         });
 
         setShowCodePrompt(false);
-        setIsLoading(false);
-        router.replace('/home');
+        
+        console.log('Conta criada com sucesso, redirecionando para /home');
+        Toast.show({
+          type: 'success',
+          text1: 'Sucesso',
+          text2: 'Conta criada com sucesso!',
+        });
+
+        // Aguardar um pouco antes de redirecionar para garantir que o estado seja atualizado
+        setTimeout(() => {
+          router.replace('/home');
+        }, 500);
       } else {
         throw new Error('Verificação incompleta. Código inválido?');
       }
     } catch (err: any) {
-      setIsLoading(false);
+      console.error('Erro na verificação:', err);
       Toast.show({
         type: 'error',
         text1: 'Erro',
         text2: err.errors?.[0]?.message || err.message || 'Falha na verificação.',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -123,7 +162,7 @@ export default function SignUpScreen() {
   };
 
   const goToLogin = () => {
-    router.replace('/login');
+    router.push('/login');
   };
 
   return (

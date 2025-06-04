@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import GroupChoiceModal from '@/components/GroupChoiceModal';
 import JoinGroupModal from '@/components/JoinGroupModal';
@@ -45,72 +46,117 @@ export default function HomeScreen() {
   const [groupName, setGroupName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Estados de loading
+  const [isLoadingUserData, setIsLoadingUserData] = useState(true);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+  const [isLoadingGroup, setIsLoadingGroup] = useState(false);
+
   const [showGroupChoiceModal, setShowGroupChoiceModal] = useState(false);
   const [showJoinGroupModal, setShowJoinGroupModal] = useState(false);
   const [isJoiningGroup, setIsJoiningGroup] = useState(false);
 
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
 
   const fetchUserTasks = useCallback(async (uid: string) => {
     try {
+      setIsLoadingTasks(true);
       const response = await fetch(
         `https://backend-faxinex.vercel.app/tasks/user/${uid}`
       );
       const data = await response.json();
       setTasks(data);
     } catch (error) {
+      console.error('Erro ao buscar tarefas:', error);
       setTasks([]);
+    } finally {
+      setIsLoadingTasks(false);
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      const fetchUserData = async () => {
-        const authentication = auth;
-        const user = authentication.currentUser;
-        if (user) {
-          setUserId(user.uid);
-          setUserName(
-            user.displayName || user.email || 'Usuário não encontrado'
-          );
-          const db = firestore;
-          const userDoc = await getDoc(doc(db, 'Users', user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            setGroupId(data.group_id ?? null);
-            setUserPhoto(
-              data.image ||
-                user.photoURL ||
-                'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
-            );
-          }
-          // Sempre buscar as tarefas ao focar na tela
-          await fetchUserTasks(user.uid);
+  const fetchUserData = useCallback(async () => {
+    if (!isLoaded || !user) {
+      setIsLoadingUserData(false);
+      return;
+    }
+
+    try {
+      setIsLoadingUserData(true);
+      
+      // Definir dados básicos do usuário
+      setUserId(user.id);
+      setUserName(user.firstName || user.username || 'Usuário');
+      setUserPhoto(
+        user.imageUrl || 
+        'https://i.postimg.cc/3rmYdXYy/estilo-de-fantasia-de-cao-adoravel.jpg'
+      );
+
+      // Buscar dados do Firestore
+      const userDoc = await getDoc(doc(firestore, 'Users', user.id));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        const userGroupId = data.group_id ?? null;
+        setGroupId(userGroupId);
+        
+        // Atualizar foto se disponível no Firestore
+        if (data.image) {
+          setUserPhoto(data.image);
         }
-      };
 
-      fetchUserData();
-    }, [fetchUserTasks])
-  );
-
-  React.useEffect(() => {
-    const fetchGroupName = async () => {
-      if (groupId && typeof groupId === 'string' && groupId.trim() !== '') {
-        const groupDoc = await getDoc(doc(firestore, 'Groups', groupId));
-        if (groupDoc.exists()) {
-          const groupData = groupDoc.data();
-          setGroupName(groupData.name);
+        // Se o usuário tem grupo, buscar dados do grupo
+        if (userGroupId && typeof userGroupId === 'string' && userGroupId.trim() !== '') {
+          setIsLoadingGroup(true);
+          try {
+            const groupDoc = await getDoc(doc(firestore, 'Groups', userGroupId));
+            if (groupDoc.exists()) {
+              const groupData = groupDoc.data();
+              setGroupName(groupData.name);
+            } else {
+              setGroupName(null);
+              // Se o grupo não existe mais, limpar o group_id do usuário
+              setGroupId(null);
+            }
+          } catch (error) {
+            console.error('Erro ao buscar dados do grupo:', error);
+            setGroupName(null);
+          } finally {
+            setIsLoadingGroup(false);
+          }
         } else {
           setGroupName(null);
         }
       } else {
+        // Se não existe documento do usuário no Firestore, criar um
+        console.log('Documento do usuário não encontrado, será criado pelo UserDataSync');
+        setGroupId(null);
         setGroupName(null);
       }
-    };
 
-    fetchGroupName();
-  }, [groupId]);
+      // Buscar tarefas do usuário
+      await fetchUserTasks(user.id);
+      
+    } catch (error) {
+      console.error('Erro ao buscar dados do usuário:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os dados do usuário');
+    } finally {
+      setIsLoadingUserData(false);
+    }
+  }, [isLoaded, user, fetchUserTasks]);
+
+  // Carregar dados quando o componente monta ou quando o usuário muda
+  useEffect(() => {
+    fetchUserData();
+  }, [fetchUserData]);
+
+  // Recarregar dados quando a tela ganha foco
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoaded && user) {
+        // Recarregar apenas as tarefas quando voltar para a tela
+        fetchUserTasks(user.id);
+      }
+    }, [isLoaded, user, fetchUserTasks])
+  );
 
   const handleShowGroupOptions = () => {
     setShowGroupChoiceModal(true);
@@ -122,13 +168,11 @@ export default function HomeScreen() {
   };
 
   const handleShowJoinGroup = () => {
-    const authentication = auth;
-    const firebaseUser = authentication.currentUser;
-    if (!firebaseUser) {
+    if (!user?.id) {
       Alert.alert('Erro', 'Usuário não autenticado. Tente novamente.');
       return;
     }
-    setUserId(firebaseUser.uid);
+    setUserId(user.id);
     setShowGroupChoiceModal(false);
     setShowJoinGroupModal(true);
   };
@@ -149,7 +193,7 @@ export default function HomeScreen() {
         return;
       }
 
-      const userDocRef = doc(firestore, 'users', userId);
+      const userDocRef = doc(firestore, 'Users', userId);
       await updateDoc(userDocRef, {
         group_id: groupIdToJoin,
       });
@@ -179,16 +223,6 @@ export default function HomeScreen() {
     return true;
   });
 
-  const nomeDificuldade = (id: number) => {
-    if (id === 1) {
-      return 'Fácil';
-    } else if (id === 2) {
-      return 'Média';
-    } else {
-      return 'Difícil';
-    }
-  };
-
   const userTasks = tasks.filter(
     (task) =>
       groupId &&
@@ -200,6 +234,23 @@ export default function HomeScreen() {
     (task) => task.status === 'Finalizada'
   );
 
+  // Loading principal
+  if (!isLoaded || isLoadingUserData) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.primary }]}>
+            Carregando dados...
+          </Text>
+        </View>
+        <BottomBar />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -210,13 +261,14 @@ export default function HomeScreen() {
           <Image
             source={{
               uri:
+                userPhoto ||
                 user?.imageUrl ||
                 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
             }}
             style={styles.avatar}
           />
           <Text style={[styles.userName, { color: colors.text }]}>
-            {user?.firstName || user?.username || 'Usuário'}
+            {userName || user?.firstName || user?.username || 'Usuário'}
           </Text>
           <TouchableOpacity
             style={styles.settingsButton}
@@ -228,15 +280,25 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        <ProjectCard
-          groupId={groupId}
-          groupName={groupName}
-          completedTasks={tasks.filter((t) => t.status === 'Finalizada').length}
-          totalTasks={tasks.length}
-          userCompletedTasks={completedUserTasks.length}
-          userTotalTasks={userTasks.length}
-          onShowGroupOptions={handleShowGroupOptions}
-        />
+        {isLoadingGroup ? (
+          <View style={styles.projectCardLoading}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.primary }]}>
+              Carregando grupo...
+            </Text>
+          </View>
+        ) : (
+          <ProjectCard
+            groupId={groupId}
+            groupName={groupName}
+            completedTasks={tasks.filter((t) => t.status === 'Finalizada').length}
+            totalTasks={tasks.length}
+            userCompletedTasks={completedUserTasks.length}
+            userTotalTasks={userTasks.length}
+            onShowGroupOptions={handleShowGroupOptions}
+          />
+        )}
+        
         <View style={styles.tasksContainer}>
           <View style={styles.tasksHeaderRow}>
             <Text style={[styles.tasksTitle, { color: colors.primary }]}>
@@ -251,6 +313,7 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </View>
+          
           <View style={styles.menuBar}>
             <Button
               title="Todas"
@@ -274,7 +337,15 @@ export default function HomeScreen() {
               textStyle={styles.menuButtonText}
             />
           </View>
-          {groupId ? (
+
+          {isLoadingTasks ? (
+            <View style={styles.loadingTasksContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.primary }]}>
+                Carregando tarefas...
+              </Text>
+            </View>
+          ) : groupId ? (
             userTasks.length > 0 ? (
               userTasks
                 .filter((task) =>
@@ -350,6 +421,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
+  projectCardLoading: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+    padding: 40,
+    borderRadius: 15,
+    backgroundColor: '#F5F5F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingTasksContainer: {
+    alignItems: 'center',
+    marginTop: 20,
   },
   header: {
     backgroundColor: Colors.light.primary,

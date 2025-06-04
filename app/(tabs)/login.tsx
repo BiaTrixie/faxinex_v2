@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -42,13 +42,21 @@ export default function LoginScreen() {
   useWarmUpBrowser();
   const router = useRouter();
   const { signIn, setActive } = useSignIn();
-  const { getToken, signOut } = useAuth();
+  const { getToken, signOut, isSignedIn } = useAuth();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirecionar se já estiver logado
+  useEffect(() => {
+    if (isSignedIn) {
+      console.log('Usuário já está logado, redirecionando para /home');
+      router.replace('/home');
+    }
+  }, [isSignedIn]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -59,13 +67,41 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const syncUserDataToFirestore = async (userId: string, userData: any) => {
+    try {
+      const userDocRef = doc(firestore, 'Users', userId);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        // Criar documento do usuário se não existir
+        await setDoc(userDocRef, {
+          id: userId,
+          name: userData.name || userData.firstName || 'Usuário',
+          email: userData.email || userData.primaryEmailAddress?.emailAddress || '',
+          group_id: '',
+          image: userData.imageUrl || 'https://i.postimg.cc/TPwPZK8R/renderizacao-3d-de-retrato-de-cao-de-desenho-animado.jpg',
+          isAdmin: false,
+          createdAt: new Date(),
+          points: 0,
+        });
+        console.log('Documento do usuário criado no Firestore');
+      } else {
+        console.log('Documento do usuário já existe no Firestore');
+      }
+    } catch (error) {
+      console.error('Erro ao sincronizar dados do usuário:', error);
+    }
+  };
+
   const handleLogin = async () => {
     if (!validate()) return;
     setIsLoading(true);
 
     try {
+      // Limpar sessão anterior
       await signOut();
 
+      console.log('Tentando fazer login com email e senha...');
       const signInAttempt = await signIn?.create({
         identifier: email,
         password,
@@ -81,26 +117,49 @@ export default function LoginScreen() {
 
         await signInWithCustomToken(auth, token);
 
-        setIsLoading(false);
-        router.replace('/home');
+        // Sincronizar dados do usuário com Firestore
+        const firebaseUser = auth.currentUser;
+        if (firebaseUser) {
+          await syncUserDataToFirestore(firebaseUser.uid, {
+            name: firebaseUser.displayName,
+            email: firebaseUser.email,
+            imageUrl: firebaseUser.photoURL,
+          });
+        }
+
+        console.log('Login realizado com sucesso, redirecionando para /home');
+        Toast.show({
+          type: 'success',
+          text1: 'Sucesso',
+          text2: 'Login realizado com sucesso!',
+        });
+
+        // Aguardar um pouco antes de redirecionar para garantir que o estado seja atualizado
+        setTimeout(() => {
+          router.replace('/home');
+        }, 500);
       } else {
         throw new Error('Login incompleto. Verifique seu e-mail ou tente novamente.');
       }
     } catch (err: any) {
-      setIsLoading(false);
+      console.error('Erro no login:', err);
       Toast.show({
         type: 'error',
         text1: 'Erro',
         text2: err.errors?.[0]?.message || err.message || 'Erro ao fazer login.',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
+      // Limpar sessão anterior
       await signOut();
 
+      console.log('Tentando fazer login com Google...');
       const { createdSessionId, setActive } = await startOAuthFlow();
 
       if (createdSessionId) {
@@ -113,24 +172,44 @@ export default function LoginScreen() {
 
         await signInWithCustomToken(auth, token);
 
-        setIsLoading(false);
-        router.replace('/home');
+        // Sincronizar dados do usuário com Firestore
+        const firebaseUser = auth.currentUser;
+        if (firebaseUser) {
+          await syncUserDataToFirestore(firebaseUser.uid, {
+            name: firebaseUser.displayName,
+            email: firebaseUser.email,
+            imageUrl: firebaseUser.photoURL,
+          });
+        }
+
+        console.log('Login com Google realizado com sucesso, redirecionando para /home');
+        Toast.show({
+          type: 'success',
+          text1: 'Sucesso',
+          text2: 'Login realizado com sucesso!',
+        });
+
+        // Aguardar um pouco antes de redirecionar para garantir que o estado seja atualizado
+        setTimeout(() => {
+          router.replace('/home');
+        }, 500);
       } else {
-        setIsLoading(false);
         throw new Error('Falha ao completar o processo de autenticação.');
       }
     } catch (err: any) {
-      setIsLoading(false);
+      console.error('Erro no login com Google:', err);
       Toast.show({
         type: 'error',
         text1: 'Erro',
         text2: err.errors?.[0]?.message || err.message || 'Erro ao fazer login com Google.',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const goToSignUp = () => {
-    router.replace('/signup');
+    router.push('/signup');
   };
 
   return (
@@ -175,7 +254,6 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
