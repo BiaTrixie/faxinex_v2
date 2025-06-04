@@ -586,7 +586,7 @@ export default function TasksViewScreen() {
           <View style={styles.searchInputContainer}>
             <Search color={colors.secondaryText} size={20} />
             <TextInput
-              style={[styles.searchInput, { color: colors.primary }]}
+              style={[styles.searchInput, { color: colors.secondaryText }]}
               placeholder="Buscar tarefas..."
               placeholderTextColor={colors.secondaryText}
               value={searchText}
