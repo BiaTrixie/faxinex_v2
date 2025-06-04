@@ -7,7 +7,7 @@ import { auth, firestore } from '@/FirebaseConfig';
 import { useUser } from '@clerk/clerk-expo';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { Plus, Settings } from 'lucide-react-native';
+import { Plus, Settings, Star } from 'lucide-react-native';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Image,
@@ -32,6 +32,14 @@ export interface Task {
   category: string;
   idGroup: string;
   status: 'Pendente' | 'Finalizada' | string;
+  description?: string;
+  createdAt?: any;
+}
+
+interface Difficulty {
+  id: number;
+  name: string;
+  points: number;
 }
 
 export default function HomeScreen() {
@@ -43,6 +51,7 @@ export default function HomeScreen() {
     'todas' | 'Pendente' | 'Finalizada'
   >('todas');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [difficulties, setDifficulties] = useState<Difficulty[]>([]);
   const [groupName, setGroupName] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -57,6 +66,22 @@ export default function HomeScreen() {
 
   const router = useRouter();
   const { user, isLoaded } = useUser();
+
+  const fetchDifficulties = useCallback(async () => {
+    try {
+      const response = await fetch('https://backend-faxinex.vercel.app/difficulties');
+      const data = await response.json();
+      setDifficulties(data);
+    } catch (error) {
+      console.error('Erro ao buscar dificuldades:', error);
+      // Fallback para dificuldades padrão
+      setDifficulties([
+        { id: 1, name: 'Fácil', points: 3 },
+        { id: 2, name: 'Média', points: 5 },
+        { id: 3, name: 'Difícil', points: 8 }
+      ]);
+    }
+  }, []);
 
   const fetchUserTasks = useCallback(async (uid: string) => {
     try {
@@ -146,7 +171,8 @@ export default function HomeScreen() {
   // Carregar dados quando o componente monta ou quando o usuário muda
   useEffect(() => {
     fetchUserData();
-  }, [fetchUserData]);
+    fetchDifficulties();
+  }, [fetchUserData, fetchDifficulties]);
 
   // Recarregar dados quando a tela ganha foco
   useFocusEffect(
@@ -157,6 +183,30 @@ export default function HomeScreen() {
       }
     }, [isLoaded, user, fetchUserTasks])
   );
+
+  const getDifficultyInfo = (difficultyId: number) => {
+    const difficulty = difficulties.find(d => d.id === difficultyId);
+    return difficulty || { id: difficultyId, name: 'Desconhecida', points: 0 };
+  };
+
+  const getDifficultyColor = (difficultyId: number) => {
+    switch (difficultyId) {
+      case 1: return '#4CAF50'; // Verde para fácil
+      case 2: return '#FF9800'; // Laranja para média
+      case 3: return '#F44336'; // Vermelho para difícil
+      default: return '#9E9E9E'; // Cinza para desconhecida
+    }
+  };
+
+  const handleTaskPress = (task: Task) => {
+    router.push({
+      pathname: '/tasks/detail',
+      params: { 
+        taskId: task.id,
+        taskData: JSON.stringify(task)
+      }
+    });
+  };
 
   const handleShowGroupOptions = () => {
     setShowGroupChoiceModal(true);
@@ -355,29 +405,54 @@ export default function HomeScreen() {
                     ? task.status === 'Pendente'
                     : task.status === 'Finalizada'
                 )
-                .map((task, index) => (
-                  <View
-                    key={index}
-                    style={{
-                      marginBottom: 15,
-                      padding: 15,
-                      backgroundColor:
-                        task.difficulty === 1
-                          ? 'green'
-                          : task.difficulty === 2
-                          ? '#eead2d'
-                          : 'red',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <Text style={{ fontWeight: 'bold', color: colors.text }}>
-                      {task.taskName}
-                    </Text>
-                    <Text style={{ color: colors.text, marginTop: 5 }}>
-                      Status: {task.status}
-                    </Text>
-                  </View>
-                ))
+                .map((task, index) => {
+                  const difficultyInfo = getDifficultyInfo(task.difficulty);
+                  const difficultyColor = getDifficultyColor(task.difficulty);
+                  
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.taskCard,
+                        { borderLeftColor: difficultyColor }
+                      ]}
+                      onPress={() => handleTaskPress(task)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.taskHeader}>
+                        <Text style={[styles.taskTitle, { color: colors.primary }]}>
+                          {task.taskName}
+                        </Text>
+                        <View 
+                          style={[
+                            styles.difficultyBadge, 
+                            { backgroundColor: difficultyColor }
+                          ]}
+                        >
+                          <Star color="#FFF" size={12} />
+                          <Text style={styles.difficultyText}>
+                            {difficultyInfo.name}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.taskInfo}>
+                        <Text style={[styles.taskStatus, { color: colors.secondaryText }]}>
+                          Status: {task.status}
+                        </Text>
+                        <Text style={[styles.taskPoints, { color: difficultyColor }]}>
+                          {difficultyInfo.points} pts
+                        </Text>
+                      </View>
+                      
+                      {task.category && (
+                        <Text style={[styles.taskCategory, { color: colors.secondaryText }]}>
+                          Categoria: {task.category}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
             ) : (
               <View style={styles.noTasksContainer}>
                 <Text style={[styles.noTasksText, { color: colors.text }]}>
@@ -488,6 +563,60 @@ const styles = StyleSheet.create({
     color: Colors.light.primary,
     marginBottom: 15,
   },
+  taskCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 8,
+  },
+  difficultyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  difficultyText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  taskInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  taskStatus: {
+    fontSize: 14,
+  },
+  taskPoints: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  taskCategory: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
   noTasksContainer: {
     alignItems: 'center',
     marginTop: 30,
@@ -496,39 +625,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#888',
     marginBottom: 20,
-  },
-  addTaskButton: {
-    minWidth: 180,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#FFF',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: Colors.light.primary,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
   },
   menuBar: {
     flexDirection: 'row',
