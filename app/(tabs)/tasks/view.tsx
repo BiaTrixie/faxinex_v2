@@ -382,7 +382,7 @@ export default function TasksViewScreen() {
     
     return (
       <TouchableOpacity
-        style={[styles.taskCard, { borderLeftColor: difficulty.color }]}
+        style={[styles.taskCard, { borderLeftColor: difficulty.color, backgroundColor: colors.backgroundColorStatusCard }]}
         onPress={() => handleTaskPress(task)}
         activeOpacity={0.7}
       >
@@ -694,7 +694,6 @@ const styles = StyleSheet.create({
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -738,7 +737,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filtersContainer: {
-    backgroundColor: '#F8F9FA',
+    // backgroundColor: '#F8F9FA',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
@@ -820,7 +819,6 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   taskCard: {
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 16,
     borderLeftWidth: 4,

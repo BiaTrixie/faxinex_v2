@@ -118,6 +118,9 @@ export default function RankingScreen() {
     <View
       style={[
         styles.rankingItem,
+        {
+          backgroundColor: colors.backgroundColorUserRanking,
+        },
         isCurrentUser && { backgroundColor: colors.lightBlue2 },
       ]}
     >
@@ -129,7 +132,7 @@ export default function RankingScreen() {
         </Text>
       </View>
       <Image source={{ uri: image }} style={styles.avatar} />
-      <Text style={[styles.userName, isCurrentUser && { color: colors.text }]}>
+      <Text style={[styles.userName, {color: colors.text}, isCurrentUser && { color: colors.text }]}>
         {name}
       </Text>
       <Text style={[styles.points, isCurrentUser && { color: colors.text }]}>
@@ -216,7 +219,7 @@ export default function RankingScreen() {
                     <Text style={styles.crownText}>2</Text>
                   </View>
                   <Text style={styles.topThreeName}>{users[1].name}</Text>
-                  <Text style={styles.topThreePoints}>{users[1].points || 0} pts</Text>
+                  <Text style={[styles.topThreePoints, { color: colors.secondaryText }]}>{users[1].points || 0} pts</Text>
                 </View>
               )}
 
@@ -231,7 +234,7 @@ export default function RankingScreen() {
                     <Text style={styles.crownText}>1</Text>
                   </View>
                   <Text style={styles.topThreeName}>{users[0].name}</Text>
-                  <Text style={styles.topThreePoints}>{users[0].points || 0} pts</Text>
+                  <Text style={[styles.topThreePoints, { color: colors.secondaryText }]}>{users[0].points || 0} pts</Text>
                 </View>
               )}
 
@@ -246,7 +249,7 @@ export default function RankingScreen() {
                     <Text style={styles.crownText}>3</Text>
                   </View>
                   <Text style={styles.topThreeName}>{users[2].name}</Text>
-                  <Text style={styles.topThreePoints}>{users[2].points || 0} pts</Text>
+                  <Text style={[styles.topThreePoints, { color: colors.secondaryText }]}>{users[2].points || 0} pts</Text>
                 </View>
               )}
             </View>
@@ -414,7 +417,6 @@ const styles = StyleSheet.create({
   },
   topThreePoints: {
     fontSize: 12,
-    color: '#666',
   },
   rankingList: {
     gap: 10,
@@ -422,7 +424,6 @@ const styles = StyleSheet.create({
   rankingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8F9FA',
     padding: 15,
     borderRadius: 10,
   },
@@ -446,7 +447,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginLeft: 15,
-    color: '#333',
   },
   points: {
     fontSize: 14,

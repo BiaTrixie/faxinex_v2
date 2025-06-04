@@ -10,7 +10,7 @@ import { firestore } from '@/FirebaseConfig';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useUser } from '@clerk/clerk-expo';
 import BottomBar from '@/components/BottomBar';
-import { Minus, Plus } from 'lucide-react-native';
+import { Minus, Plus, ArrowLeft } from 'lucide-react-native';
 
 interface GroupMember {
   id: string;
@@ -42,7 +42,7 @@ export default function CreateTaskScreen() {
 
     try {
       setLoadingMembers(true);
-      
+
       const userDoc = await getDoc(doc(firestore, 'Users', user.id));
       if (!userDoc.exists()) {
         Alert.alert('Erro', 'Dados do usuário não encontrados');
@@ -51,7 +51,7 @@ export default function CreateTaskScreen() {
 
       const userData = userDoc.data();
       const groupId = userData.group_id;
-      
+
       if (!groupId) {
         Alert.alert('Aviso', 'Você precisa estar em um grupo para criar tarefas');
         router.back();
@@ -78,7 +78,7 @@ export default function CreateTaskScreen() {
             image: user.imageUrl || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg',
           };
         }
-        
+
         const memberDoc = await getDoc(doc(firestore, 'Users', participantId));
         if (memberDoc.exists()) {
           const memberData = memberDoc.data();
@@ -94,7 +94,7 @@ export default function CreateTaskScreen() {
 
       const membersData = await Promise.all(membersPromises);
       const validMembers = membersData.filter((member): member is GroupMember => member !== null);
-      
+
       setGroupMembers(validMembers);
 
     } catch (error) {
@@ -124,70 +124,70 @@ export default function CreateTaskScreen() {
     return id;
   };
 
-const handleCreateTask = async () => {
-  if (!title.trim() || !description.trim() || !userGroupId) { // Removido !category.trim()
-    Toast.show({
-      type: 'error',
-      text1: 'Erro',
-      text2: 'Por favor, preencha todos os campos obrigatórios',
-      position: 'top',
-    });
-    return;
-  }
+  const handleCreateTask = async () => {
+    if (!title.trim() || !description.trim() || !userGroupId) { // Removido !category.trim()
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: 'Por favor, preencha todos os campos obrigatórios',
+        position: 'top',
+      });
+      return;
+    }
 
-  if (selectedParticipants.length === 0) {
-    Toast.show({
-      type: 'error',
-      text1: 'Participantes necessários',
-      text2: 'Selecione pelo menos um participante para criar a tarefa',
-      position: 'top',
-    });
-    return;
-  }
+    if (selectedParticipants.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Participantes necessários',
+        text2: 'Selecione pelo menos um participante para criar a tarefa',
+        position: 'top',
+      });
+      return;
+    }
 
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const taskId = generateTaskId();
-    await setDoc(doc(firestore, 'Tasks', taskId), {
-      id: taskId,
-      taskName: title.trim(),
-      description: description.trim(),
-      difficulty: difficulty === 'fácil' ? 1 : difficulty === 'média' ? 2 : 3,
-      category: category.trim(), // Pode ser string vazia
-      participants: selectedParticipants,
-      idGroup: userGroupId,
-      status: 'Pendente',
-      createdBy: user?.id || '',
-      createdAt: serverTimestamp(),
-    });
+    try {
+      const taskId = generateTaskId();
+      await setDoc(doc(firestore, 'Tasks', taskId), {
+        id: taskId,
+        taskName: title.trim(),
+        description: description.trim(),
+        difficulty: difficulty === 'fácil' ? 1 : difficulty === 'média' ? 2 : 3,
+        category: category.trim(), // Pode ser string vazia
+        participants: selectedParticipants,
+        idGroup: userGroupId,
+        status: 'Pendente',
+        createdBy: user?.id || '',
+        createdAt: serverTimestamp(),
+      });
 
-    Toast.show({
-      type: 'success',
-      text1: 'Sucesso',
-      text2: 'Tarefa criada com sucesso!',
-      position: 'top',
-    });
+      Toast.show({
+        type: 'success',
+        text1: 'Sucesso',
+        text2: 'Tarefa criada com sucesso!',
+        position: 'top',
+      });
 
-    setTimeout(() => {
-      router.replace('/home');
-    }, 1200);
-  } catch (error) {
-    console.error('Erro ao criar tarefa:', error);
-    Toast.show({
-      type: 'error',
-      text1: 'Erro',
-      text2: 'Não foi possível criar a tarefa. Tente novamente.',
-      position: 'top',
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setTimeout(() => {
+        router.replace('/home');
+      }, 1200);
+    } catch (error) {
+      console.error('Erro ao criar tarefa:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Erro',
+        text2: 'Não foi possível criar a tarefa. Tente novamente.',
+        position: 'top',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const ParticipantItem = ({ member, isSelected }: { member: GroupMember; isSelected: boolean }) => {
     const isCurrentUser = member.id === user?.id;
-    
+
     return (
       <View style={styles.participantItem}>
         <Image source={{ uri: member.image }} style={styles.participantAvatar} />
@@ -218,6 +218,7 @@ const handleCreateTask = async () => {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
+
           colors={[Colors.light.primary, Colors.light.lightBlue1]}
           style={styles.header}
         >
@@ -237,6 +238,12 @@ const handleCreateTask = async () => {
         colors={[Colors.light.primary, Colors.light.lightBlue1]}
         style={styles.header}
       >
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.push('/home')}
+        >
+          <ArrowLeft color="#FFF" size={24} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>CRIAR NOVA TAREFA</Text>
       </LinearGradient>
 
@@ -281,7 +288,7 @@ const handleCreateTask = async () => {
           <View style={styles.participantsSectionHeader}>
             <Text style={styles.label}>Participantes ({selectedParticipants.length})</Text>
           </View>
-          
+
           <Text style={styles.participantsSubtitle}>
             Selecione os membros do grupo que participarão desta tarefa
           </Text>
@@ -335,12 +342,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFF',
   },
+  backButton: {
+    marginRight: 15,
+    padding: 5,
+  },
   header: {
     paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     color: '#FFF',

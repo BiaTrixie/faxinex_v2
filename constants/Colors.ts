@@ -12,6 +12,8 @@ export default {
     tabIconSelected: '#5E75F2',
     icon: '#fff',
     secondaryText : '#808080',
+    backgroundColorStatusCard: '#FFF',
+    backgroundColorUserRanking: '#F8F9FA'
   },
   dark: {
     primary: '#5E75F2',
@@ -26,5 +28,7 @@ export default {
     tabIconSelected: '#5E75F2',
     icon: '#fff',
     secondaryText : '#fff',
+    backgroundColorStatusCard: '#333',
+    backgroundColorUserRanking: 'rgba(41, 112, 160, 0.05)'
   },
 };

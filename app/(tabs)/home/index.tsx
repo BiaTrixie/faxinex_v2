@@ -419,7 +419,10 @@ export default function HomeScreen() {
                       key={index}
                       style={[
                         styles.taskCard,
-                        { borderLeftColor: difficultyColor }
+                        {
+                          borderLeftColor: difficultyColor,
+                          backgroundColor: colors.backgroundColorStatusCard,
+                        }
                       ]}
                       onPress={() => handleTaskPress(task)}
                       activeOpacity={0.7}
@@ -580,7 +583,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   taskCard: {
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,

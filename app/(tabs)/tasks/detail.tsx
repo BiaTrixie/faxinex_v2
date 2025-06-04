@@ -378,7 +378,7 @@ export default function TaskDetailScreen() {
         >
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/home')}
           >
             <ArrowLeft color="#FFF" size={24} />
           </TouchableOpacity>
@@ -410,7 +410,7 @@ export default function TaskDetailScreen() {
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.push('/home')}
         >
           <ArrowLeft color="#FFF" size={24} />
         </TouchableOpacity>
