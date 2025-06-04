@@ -8,54 +8,98 @@ import {
   Image,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { doc, getDoc } from 'firebase/firestore';
+import { useUser } from '@clerk/clerk-expo';
+
 import Colors from '@/constants/Colors';
 import BottomBar from '@/components/BottomBar';
 import { useTheme } from '@/contexts/ThemeContext';
+import { firestore } from '@/FirebaseConfig';
 
-const PERIODS = ['DIÁRIO', 'SEMANAL', 'MENSAL', 'TOTAL'];
+const PERIODS = ['GRUPO', 'GLOBAL'];
 
-// 1. Defina a interface User
 interface User {
   id: string;
   name: string;
   image: string;
   points: number;
+  group_id?: string;
 }
 
 export default function RankingScreen() {
   const { colors } = useTheme();
-  const [selectedPeriod, setSelectedPeriod] = useState('SEMANAL');
+  const { user } = useUser();
+  const [selectedPeriod, setSelectedPeriod] = useState('GRUPO');
   const [refreshing, setRefreshing] = useState(false);
-  // 2. Tipar o estado users corretamente
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [userGroupId, setUserGroupId] = useState<string | null>(null);
+
+  // Buscar o group_id do usuário logado
+  const fetchUserGroupId = async () => {
+    if (!user?.id) return null;
+    
+    try {
+      const userDoc = await getDoc(doc(firestore, 'Users', user.id));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserGroupId(userData.group_id || null);
+        return userData.group_id || null;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar group_id do usuário:', error);
+    }
+    return null;
+  };
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+      
+      // Primeiro, obter o group_id do usuário atual
+      const groupId = await fetchUserGroupId();
+      
       const res = await fetch('https://backend-faxinex.vercel.app/users');
       const data = await res.json();
+      
+      let filteredUsers = data;
+      
+      if (selectedPeriod === 'GRUPO' && groupId) {
+        // Filtrar apenas usuários do mesmo grupo
+        filteredUsers = data.filter((user: User) => user.group_id === groupId);
+      }
+      // Para GLOBAL, mostra todos os usuários (não filtra)
+      
       // Ordena por pontos decrescente
-      setUsers(
-        data.sort(
-          (a: { points: number }, b: { points: number }) => b.points - a.points
-        )
+      const sortedUsers = filteredUsers.sort(
+        (a: User, b: User) => (b.points || 0) - (a.points || 0)
       );
-    } catch (e) {
+      
+      setUsers(sortedUsers);
+    } catch (error) {
+      console.error('Erro ao buscar usuários:', error);
       setUsers([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [selectedPeriod, user?.id]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
     fetchUsers().finally(() => setRefreshing(false));
-  }, []);
+  }, [selectedPeriod]);
 
-  // 3. Tipar as props do RankingItem
+  const handlePeriodChange = (period: string) => {
+    setSelectedPeriod(period);
+  };
+
   const RankingItem = ({
     position,
     name,
@@ -87,10 +131,17 @@ export default function RankingScreen() {
         {name}
       </Text>
       <Text style={[styles.points, isCurrentUser && { color: colors.text }]}>
-        {points} pts
+        {points || 0} pts
       </Text>
     </View>
   );
+
+  const getTopThreeUsers = () => {
+    return users.slice(0, 3);
+  };
+
+  const shouldShowGroupRanking = selectedPeriod === 'GRUPO' && userGroupId;
+  const hasNoGroupAccess = selectedPeriod === 'GRUPO' && !userGroupId;
 
   return (
     <SafeAreaView
@@ -111,7 +162,7 @@ export default function RankingScreen() {
                   backgroundColor: colors.background,
                 },
               ]}
-              onPress={() => setSelectedPeriod(period)}
+              onPress={() => handlePeriodChange(period)}
             >
               <Text
                 style={[
@@ -126,62 +177,100 @@ export default function RankingScreen() {
         </View>
       </LinearGradient>
 
-      <ScrollView
-        style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {users.length >= 3 && (
-          <View style={styles.topThree}>
-            <View style={styles.secondPlace}>
-              <Image
-                source={{ uri: users[1].image }}
-                style={styles.topThreeAvatar}
-              />
-              <View style={[styles.crown, styles.silverCrown]}>
-                <Text style={styles.crownText}>2</Text>
-              </View>
-              <Text style={styles.topThreeName}>{users[1].name}</Text>
-              <Text style={styles.topThreePoints}>{users[1].points} pts</Text>
-            </View>
-            <View style={styles.firstPlace}>
-              <Image
-                source={{ uri: users[0].image }}
-                style={[styles.topThreeAvatar, styles.firstPlaceAvatar]}
-              />
-              <View style={[styles.crown, styles.goldCrown]}>
-                <Text style={styles.crownText}>1</Text>
-              </View>
-              <Text style={styles.topThreeName}>{users[0].name}</Text>
-              <Text style={styles.topThreePoints}>{users[0].points} pts</Text>
-            </View>
-            <View style={styles.thirdPlace}>
-              <Image
-                source={{ uri: users[2].image }}
-                style={styles.topThreeAvatar}
-              />
-              <View style={[styles.crown, styles.bronzeCrown]}>
-                <Text style={styles.crownText}>3</Text>
-              </View>
-              <Text style={styles.topThreeName}>{users[2].name}</Text>
-              <Text style={styles.topThreePoints}>{users[2].points} pts</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.rankingList}>
-          {users.map((user, idx) => (
-            <RankingItem
-              key={user.id}
-              position={idx + 1}
-              name={user.name}
-              points={user.points}
-              image={user.image}
-            />
-          ))}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.primary }]}>
+            Carregando ranking...
+          </Text>
         </View>
-      </ScrollView>
+      ) : hasNoGroupAccess ? (
+        <View style={styles.noGroupContainer}>
+          <Text style={[styles.noGroupText, { color: colors.primary }]}>
+            Você precisa estar em um grupo para ver o ranking do grupo
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.content}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {users.length > 0 && (
+            <View style={styles.topThree}>
+              {/* Segunda posição */}
+              {users[1] && (
+                <View style={styles.secondPlace}>
+                  <Image
+                    source={{ uri: users[1].image }}
+                    style={styles.topThreeAvatar}
+                  />
+                  <View style={[styles.crown, styles.silverCrown]}>
+                    <Text style={styles.crownText}>2</Text>
+                  </View>
+                  <Text style={styles.topThreeName}>{users[1].name}</Text>
+                  <Text style={styles.topThreePoints}>{users[1].points || 0} pts</Text>
+                </View>
+              )}
+              
+              {/* Primeira posição */}
+              {users[0] && (
+                <View style={styles.firstPlace}>
+                  <Image
+                    source={{ uri: users[0].image }}
+                    style={[styles.topThreeAvatar, styles.firstPlaceAvatar]}
+                  />
+                  <View style={[styles.crown, styles.goldCrown]}>
+                    <Text style={styles.crownText}>1</Text>
+                  </View>
+                  <Text style={styles.topThreeName}>{users[0].name}</Text>
+                  <Text style={styles.topThreePoints}>{users[0].points || 0} pts</Text>
+                </View>
+              )}
+              
+              {/* Terceira posição */}
+              {users[2] && (
+                <View style={styles.thirdPlace}>
+                  <Image
+                    source={{ uri: users[2].image }}
+                    style={styles.topThreeAvatar}
+                  />
+                  <View style={[styles.crown, styles.bronzeCrown]}>
+                    <Text style={styles.crownText}>3</Text>
+                  </View>
+                  <Text style={styles.topThreeName}>{users[2].name}</Text>
+                  <Text style={styles.topThreePoints}>{users[2].points || 0} pts</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <View style={styles.rankingList}>
+            {users.length > 0 ? (
+              users.map((rankUser, idx) => (
+                <RankingItem
+                  key={rankUser.id}
+                  position={idx + 1}
+                  name={rankUser.name}
+                  points={rankUser.points || 0}
+                  image={rankUser.image}
+                  isCurrentUser={rankUser.id === user?.id}
+                />
+              ))
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
+                  {selectedPeriod === 'GRUPO' 
+                    ? 'Nenhum membro do grupo encontrado'
+                    : 'Nenhum usuário encontrado'
+                  }
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      )}
       <BottomBar />
     </SafeAreaView>
   );
@@ -191,6 +280,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
+  noGroupContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noGroupText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   header: {
     paddingTop: 20,
@@ -207,28 +316,25 @@ const styles = StyleSheet.create({
   },
   periodSelector: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 10,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    gap: 20,
   },
   periodButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-  },
-  selectedPeriodButton: {
-    backgroundColor: '#FFF',
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    minWidth: 80,
+    alignItems: 'center',
   },
   periodButtonText: {
     color: '#FFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-  },
-  selectedPeriodButtonText: {
-    color: Colors.light.primary,
   },
   content: {
     flex: 1,
-    padding: 35
+    padding: 20,
   },
   topThree: {
     flexDirection: 'row',
@@ -236,7 +342,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingVertical: 20,
     paddingHorizontal: 10,
-    backgroundColor: 'colors.background,',
+    marginBottom: 30,
   },
   firstPlace: {
     alignItems: 'center',
@@ -283,19 +389,21 @@ const styles = StyleSheet.create({
   crownText: {
     color: '#FFF',
     fontWeight: 'bold',
+    fontSize: 12,
   },
   topThreeName: {
     marginTop: 8,
     fontSize: 14,
     fontWeight: '600',
     color: Colors.light.primary,
+    textAlign: 'center',
   },
   topThreePoints: {
     fontSize: 12,
     color: '#666',
   },
   rankingList: {
-    padding: 20,
+    gap: 10,
   },
   rankingItem: {
     flexDirection: 'row',
@@ -303,10 +411,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F9FA',
     padding: 15,
     borderRadius: 10,
-    marginBottom: 10,
-  },
-  currentUserItem: {
-    backgroundColor: Colors.light.lightBlue2,
   },
   positionContainer: {
     width: 30,
@@ -316,9 +420,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#666',
-  },
-  currentUserText: {
-    color: '#FFF',
   },
   avatar: {
     width: 40,
@@ -337,5 +438,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: Colors.light.primary,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
