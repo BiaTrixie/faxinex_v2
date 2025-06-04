@@ -7,6 +7,42 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:508822075025:android:694f26fdd4079160233130",
+        "android_client_info": {
+          "package_name": "com.biatrixie.faxinex"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "508822075025-0ho5nq8vqbbb83is28lfk93ff8badtv3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAs50X1JoOEVfRPqpGk-ERhNQgXcitk6e0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "508822075025-0ho5nq8vqbbb83is28lfk93ff8badtv3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "508822075025-1470e41opqpq53bdlrotid69fvnmeh02.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.faxinex"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:508822075025:android:ffd3f97dd6491c18233130",
         "android_client_info": {
           "package_name": "com.faxinex"
