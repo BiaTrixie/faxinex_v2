@@ -101,8 +101,8 @@ export default function TaskDetailScreen() {
             difficultyId === 1
               ? 'Fácil'
               : difficultyId === 2
-              ? 'Média'
-              : 'Difícil',
+                ? 'Média'
+                : 'Difícil',
           points: difficultyId === 1 ? 3 : difficultyId === 2 ? 5 : 8,
         });
       }
@@ -114,8 +114,8 @@ export default function TaskDetailScreen() {
           difficultyId === 1
             ? 'Fácil'
             : difficultyId === 2
-            ? 'Média'
-            : 'Difícil',
+              ? 'Média'
+              : 'Difícil',
         points: difficultyId === 1 ? 3 : difficultyId === 2 ? 5 : 8,
       });
     }
@@ -275,27 +275,65 @@ export default function TaskDetailScreen() {
     }
   };
 
-  const formatDate = (date: any) => {
-    if (!date) return 'Data não disponível';
+  const formatDate = (dateInput: any): string => {
+    console.log('ERROOOO', dateInput)
+    // Verifica se a entrada é nula, indefinida ou vazia
+    if (dateInput === null || typeof dateInput === 'undefined' || dateInput === '') {
+      return 'Data não disponível';
+    }
+
+    let dateObj: Date;
 
     try {
-      let dateObj;
-      if (date.toDate) {
-        dateObj = date.toDate();
-      } else if (date instanceof Date) {
-        dateObj = date;
+      if (dateInput && typeof dateInput.toDate === 'function') {
+        // Caso 1: Objeto com método toDate() (ex: Firebase Timestamp)
+        dateObj = dateInput.toDate();
+      } else if (dateInput instanceof Date) {
+        // Caso 2: Já é um objeto Date
+        dateObj = dateInput;
+      } else if (typeof dateInput === 'number') {
+        // Caso 3: É um número. Assumimos que está em SEGUNDOS, conforme o contexto do problema.
+        // Convertendo para milissegundos para o construtor Date.
+        dateObj = new Date(dateInput * 1000);
+      } else if (typeof dateInput === 'string') {
+        // Caso 4: É uma string. Tentamos interpretá-la.
+        // Verifica se é uma string puramente numérica
+        const numericValue = Number(dateInput);
+        if (!isNaN(numericValue) && dateInput.trim() === String(numericValue)) {
+          // É uma string numérica. Decidir se é segundos ou milissegundos.
+          // Uma heurística comum: timestamps em segundos têm ~10 dígitos, em milissegundos ~13.
+          // Se tiver 10 dígitos, tratamos como segundos.
+          if (String(Math.floor(Math.abs(numericValue))).length === 10) {
+            dateObj = new Date(numericValue * 1000); // Assume segundos
+          } else {
+            dateObj = new Date(numericValue); // Assume milissegundos
+          }
+        } else {
+          // É uma string não numérica (ex: "2023-10-26" ou "May 26, 2025")
+          dateObj = new Date(dateInput);
+        }
       } else {
-        dateObj = new Date(date);
+        // Outros tipos: Tenta criar um objeto Date diretamente (pode resultar em data inválida)
+        dateObj = new Date(dateInput);
       }
 
+      // Verifica se o objeto Date resultante é válido
+      if (isNaN(dateObj.getTime())) {
+        return 'Data inválida';
+      }
+
+      // Formata a data para o padrão pt-BR
       return dateObj.toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        // timeZone: 'America/Sao_Paulo' // Adicionar para consistência de fuso horário
       });
+
     } catch (error) {
+      // Em caso de qualquer erro durante o processo
       return 'Data inválida';
     }
   };
@@ -428,15 +466,15 @@ export default function TaskDetailScreen() {
               </Text>
             </View>
 
-            {task.createdAt && (
-              <View style={styles.infoRow}>
-                <Calendar color={Colors.light.primary} size={20} />
-                <Text style={styles.infoLabel}>Criada em:</Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(task.createdAt)}
-                </Text>
-              </View>
-            )}
+            {/* {task.createdAt && ( */}
+            <View style={styles.infoRow}>
+              <Calendar color={Colors.light.primary} size={20} />
+              <Text style={styles.infoLabel}>Criada em:</Text>
+              <Text style={styles.infoValue}>
+                {formatDate(task.createdAt._seconds)}
+              </Text>
+            </View>
+            {/* )} */}
           </View>
 
           {task.description && (
